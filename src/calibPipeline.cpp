@@ -14,7 +14,7 @@ CalibPipeline::CalibPipeline(captureParameters params) :
 
 }
 
-int CalibPipeline::start(Sptr<FrameProcessor> processor)
+int CalibPipeline::start(std::vector<Sptr<FrameProcessor>> processors)
 {
     cv::VideoCapture capture;
     if(mCaptureParams.source == InputVideoSource::Camera)
@@ -32,18 +32,22 @@ int CalibPipeline::start(Sptr<FrameProcessor> processor)
         throw std::runtime_error("Unable to open video source");
 
     cv::Mat frame, processedFrame;
-    while(capture.grab() && !processor->isProcessed()) {
+    while(capture.grab()) {
         capture.retrieve(frame);
         if(mCaptureParams.flipVertical)
             cv::flip(frame, frame, -1);
 
-        processedFrame = processor->processFrame(frame);
+        frame.copyTo(processedFrame);
+        for (auto it = processors.begin(); it != processors.end(); ++it)
+            processedFrame = (*it)->processFrame(processedFrame);
         cv::imshow(mainWindowName, processedFrame);
         int key = cv::waitKey(CAP_DELAY);
         if(key == 27)
             return -1;
+        for (auto it = processors.begin(); it != processors.end(); ++it)
+            if((*it)->isProcessed())
+                return 0;
     }
-
 
     return 0;
 }

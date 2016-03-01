@@ -1,6 +1,8 @@
 #ifndef CALIB_PIPELINE_HPP
 #define CALIB_PIPELINE_HPP
 
+#include <vector>
+
 #include "calibCommon.hpp"
 #include "frameProcessor.hpp"
 
@@ -16,7 +18,7 @@ protected:
 
 public:
     CalibPipeline(captureParameters params);
-    int start(Sptr<FrameProcessor> processor);
+    int start(std::vector<Sptr<FrameProcessor>> processors);
     cv::Size getImageSize() const;
 };
 

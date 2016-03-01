@@ -1,5 +1,6 @@
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
+#include <opencv2/aruco/charuco.hpp>
 #include <string>
 #include <exception>
 #include <iostream>
@@ -58,29 +59,41 @@ int main(int argc, char** argv)
     showProcessor = Sptr<FrameProcessor>(new ShowProcessor(globalData));
 
     Sptr<CalibPipeline> pipeline(new CalibPipeline(capParams));
+    std::vector<Sptr<FrameProcessor>> processors;
+    processors.push_back(capProcessor);
+    processors.push_back(showProcessor);
+
 
     try {
         while(true)
         {
             //collect data
-            if (pipeline->start(capProcessor)!= 0)
+            if (pipeline->start(processors) != 0)
                 break;
             //start calibration
             globalData->imageSize = pipeline->getImageSize();
+            std::cout << "calibration started\n";
             if(capParams.board != TemplateType::chAruco)
                 globalData->totalAvgErr = cv::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
                                 globalData->distCoeffs, globalData->rvecs, globalData->tvecs, 0, cv::TermCriteria(
                                     cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-5) );
             else {
-                //call charuco calubration
+                cv::Ptr<cv::aruco::Dictionary> dictionary =
+                        cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(0));
+                cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
+                            cv::aruco::CharucoBoard::create(6, 8, 200, 100, dictionary);
+                globalData->totalAvgErr =
+                        cv::aruco::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds, charucoboard, globalData->imageSize,
+                                                      globalData->cameraMatrix, globalData->distCoeffs, globalData->rvecs, globalData->tvecs, 0, cv::TermCriteria(
+                                                              cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-5));
             }
-
             //show undist view
-            if(pipeline->start(showProcessor)!= 0)
-                break;
+            //if(pipeline->start(showProcessor)!= 0)
+            for (auto it = processors.begin(); it != processors.end(); ++it)
+                        (*it)->resetState();
 
-            capProcessor->resetState();
-            showProcessor->resetState();
+            //capProcessor->resetState();
+            //showProcessor->resetState();
         }
         //write calibration data to file
     }

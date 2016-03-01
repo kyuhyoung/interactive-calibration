@@ -294,6 +294,7 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
 
         return frameCopy;
     }
+    cv::circle(frame, cv::Point2f(100, 100), 10, cv::Scalar(0, 255, 0), 10);
     return frame;
 }
 
