@@ -10,7 +10,7 @@
 namespace calib
 {
 
-enum class PipelineExitStatus { Finished, DeleteLastFrame, Calibrate, DeleteAllFrames, SaveCurrentData };
+enum class PipelineExitStatus { Finished, DeleteLastFrame, Calibrate, DeleteAllFrames, SaveCurrentData, SwitchUndistort };
 
 class CalibPipeline
 {

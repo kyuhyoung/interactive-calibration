@@ -56,12 +56,15 @@ class ShowProcessor : public FrameProcessor
 {
 protected:
     Sptr<calibrationData> mCalibdata;
+    bool mNeedUndistrot;
+
     void drawGridPoints(const cv::Mat& frame);
 public:
     ShowProcessor(Sptr<calibrationData> data);
     virtual cv::Mat processFrame(const cv::Mat& frame) override;
     virtual bool isProcessed() const override;
     virtual void resetState() override;
+    void switchUndistort();
     ~ShowProcessor();
 };
 

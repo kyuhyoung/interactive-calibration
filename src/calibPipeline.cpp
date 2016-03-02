@@ -48,8 +48,10 @@ PipelineExitStatus CalibPipeline::start(std::vector<Sptr<FrameProcessor>> proces
             return PipelineExitStatus::DeleteLastFrame;
         else if (key == 100) // d
             return PipelineExitStatus::DeleteAllFrames;
-        else if (key == 115) //s
+        else if (key == 115) // s
             return PipelineExitStatus::SaveCurrentData;
+        else if (key == 117) // u
+            return PipelineExitStatus::SwitchUndistort;
 
         for (auto it = processors.begin(); it != processors.end(); ++it)
             if((*it)->isProcessed())

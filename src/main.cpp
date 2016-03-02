@@ -98,12 +98,10 @@ int main(int argc, char** argv)
     processors.push_back(showProcessor);
 
     std::stack<cameraParameters> paramsStack;
-    //paramsStack.push(cameraParameters());
 
     try {
         while(true)
         {
-            //collect data
             auto exitStatus = pipeline->start(processors);
             if (exitStatus == PipelineExitStatus::Finished)
                 break;
@@ -157,6 +155,8 @@ int main(int argc, char** argv)
             }
             else if (exitStatus == PipelineExitStatus::SaveCurrentData)
                 saveCalibrationParameters(globalData, parser.get<std::string>("of"));
+            else if (exitStatus == PipelineExitStatus::SwitchUndistort)
+                static_cast<ShowProcessor*>(showProcessor.get())->switchUndistort();
 
             for (auto it = processors.begin(); it != processors.end(); ++it)
                         (*it)->resetState();
