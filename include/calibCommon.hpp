@@ -30,6 +30,17 @@ namespace calib
         std::vector<cv::Mat> allCharucoIds;
     };
 
+    struct cameraParameters
+    {
+        cv::Mat cameraMatrix;
+        cv::Mat distCoeffs;
+
+        cameraParameters(){}
+        cameraParameters(cv::Mat& _cameraMatrix, cv::Mat& _distCoeffs) :
+            cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs)
+        {}
+    };
+
     struct captureParameters
     {
         InputType captureMethod;

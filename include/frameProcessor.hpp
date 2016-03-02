@@ -2,6 +2,8 @@
 #define FRAME_PROCESSOR_HPP
 
 #include <opencv2/core.hpp>
+#include <opencv2/aruco/charuco.hpp>
+#include <opencv2/calib3d.hpp>
 #include "calibCommon.hpp"
 
 namespace calib
@@ -28,8 +30,13 @@ protected:
     cv::Mat mCurrentCharucoCorners;
     cv::Mat mCurrentCharucoIds;
 
+    cv::Ptr<cv::SimpleBlobDetector> mBlobDetectorPtr;
+    cv::Ptr<cv::aruco::Dictionary> mArucoDictionary;
+    cv::Ptr<cv::aruco::CharucoBoard> mCharucoBoard;
+
     int mNeededFramesNum;
     int mCapuredFrames;
+    float mMaxTemplateOffset;
 
     bool detectAndParseChessboard(const cv::Mat& frame);
     bool detectAndParseChAruco(const cv::Mat& frame);
@@ -49,7 +56,7 @@ class ShowProcessor : public FrameProcessor
 {
 protected:
     Sptr<calibrationData> mCalibdata;
-
+    void drawGridPoints(const cv::Mat& frame);
 public:
     ShowProcessor(Sptr<calibrationData> data);
     virtual cv::Mat processFrame(const cv::Mat& frame) override;

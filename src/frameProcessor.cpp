@@ -11,6 +11,7 @@ using namespace calib;
 #define IMAGE_WIDTH 1280
 #define IMAGE_HEIGHT 960
 #define VIDEO_TEXT_SIZE 4
+#define POINT_SIZE 5
 
 static cv::SimpleBlobDetector::Params getDetectorParams()
 {
@@ -69,19 +70,15 @@ bool CalibProcessor::detectAndParseChessboard(const cv::Mat &frame)
 
 bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
 {
-    cv::Ptr<cv::aruco::Dictionary> dictionary =
-            cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(0));
-    cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
-                cv::aruco::CharucoBoard::create(6, 8, 200, 100, dictionary);
-    cv::Ptr<cv::aruco::Board> board = charucoboard.staticCast<cv::aruco::Board>();
+    cv::Ptr<cv::aruco::Board> board = mCharucoBoard.staticCast<cv::aruco::Board>();
 
-    std::vector< std::vector< cv::Point2f > > corners, rejected;
+    std::vector<std::vector<cv::Point2f>> corners, rejected;
     std::vector<int> ids;
-    cv::aruco::detectMarkers(frame, dictionary, corners, ids, cv::aruco::DetectorParameters::create(), rejected);
+    cv::aruco::detectMarkers(frame, mArucoDictionary, corners, ids, cv::aruco::DetectorParameters::create(), rejected);
     cv::aruco::refineDetectedMarkers(frame, board, corners, ids, rejected);
     cv::Mat currentCharucoCorners, currentCharucoIds;
     if(ids.size() > 0)
-        cv::aruco::interpolateCornersCharuco(corners, ids, frame, charucoboard, currentCharucoCorners,
+        cv::aruco::interpolateCornersCharuco(corners, ids, frame, mCharucoBoard, currentCharucoCorners,
                                          currentCharucoIds);
     if(ids.size() > 0) cv::aruco::drawDetectedMarkers(frame, corners);
 
@@ -106,7 +103,7 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
 
 bool CalibProcessor::detectAndParseACircles(const cv::Mat &frame)
 {
-    bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID);
+    bool isTemplateFound = findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
     if(isTemplateFound) {
         mTemplateLocations.insert(mTemplateLocations.begin(), mCurrentImagePoints[0]);
         cv::drawChessboardCorners(frame, mBoardSize, cv::Mat(mCurrentImagePoints), isTemplateFound);
@@ -116,16 +113,14 @@ bool CalibProcessor::detectAndParseACircles(const cv::Mat &frame)
 
 bool CalibProcessor::detectAndParseDualACircles(const cv::Mat &frame)
 {
-    cv::SimpleBlobDetector::Params detectorParams = getDetectorParams();
-    cv::Ptr<cv::SimpleBlobDetector> detectorPtr = cv::SimpleBlobDetector::create(detectorParams);
     std::vector<cv::Point2f> blackPointbuf;
 
     cv::Mat invertedView;
     cv::bitwise_not(frame, invertedView);
-    bool isWhiteGridFound = cv::findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, detectorPtr);
+    bool isWhiteGridFound = cv::findCirclesGrid(frame, mBoardSize, mCurrentImagePoints, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
     if(!isWhiteGridFound)
         return false;
-    bool isBlackGridFound = cv::findCirclesGrid(invertedView, mBoardSize, blackPointbuf, cv::CALIB_CB_ASYMMETRIC_GRID, detectorPtr);
+    bool isBlackGridFound = cv::findCirclesGrid(invertedView, mBoardSize, blackPointbuf, cv::CALIB_CB_ASYMMETRIC_GRID, mBlobDetectorPtr);
 
     if(!isBlackGridFound)
     {
@@ -148,26 +143,22 @@ void CalibProcessor::saveFrameData()
     switch(mBoardType)
     {
     case TemplateType::Chessboard:
-    {
         for( int i = 0; i < mBoardSize.height; ++i )
             for( int j = 0; j < mBoardSize.width; ++j )
                 objectPoints.push_back(cv::Point3f(j*squareSize, i*squareSize, 0));
         mCalibdata->imagePoints.push_back(mCurrentImagePoints);
         mCalibdata->objectPoints.push_back(objectPoints);
-    }
         break;
     case TemplateType::chAruco:
         mCalibdata->allCharucoCorners.push_back(mCurrentCharucoCorners);
         mCalibdata->allCharucoIds.push_back(mCurrentCharucoIds);
         break;
     case TemplateType::AcirclesGrid:
-    {
         for( int i = 0; i < mBoardSize.height; i++ )
             for( int j = 0; j < mBoardSize.width; j++ )
                 objectPoints.push_back(cv::Point3f((2*j + i % 2)*squareSize, i*squareSize, 0));
         mCalibdata->imagePoints.push_back(mCurrentImagePoints);
         mCalibdata->objectPoints.push_back(objectPoints);
-    }
         break;
     case TemplateType::DoubleAcirclesGrid:
     {
@@ -197,6 +188,21 @@ CalibProcessor::CalibProcessor(Sptr<calibrationData> data, TemplateType board, c
 {
     mCapuredFrames = 0;
     mNeededFramesNum = 1;
+    mMaxTemplateOffset = sqrt(IMAGE_HEIGHT*IMAGE_HEIGHT + IMAGE_WIDTH*IMAGE_WIDTH) / 20.0;
+
+    switch(mBoardType)
+    {
+    case TemplateType::chAruco:
+        mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(0));
+        mCharucoBoard = cv::aruco::CharucoBoard::create(6, 8, 200, 100, mArucoDictionary);
+        break;
+    case TemplateType::AcirclesGrid:
+        mBlobDetectorPtr = cv::SimpleBlobDetector::create();
+        break;
+    case TemplateType::DoubleAcirclesGrid:
+        mBlobDetectorPtr = cv::SimpleBlobDetector::create(getDetectorParams());
+        break;
+    }
 }
 
 cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
@@ -206,7 +212,6 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
     bool isTemplateFound = false;
     mCurrentImagePoints.clear();
     int delayBetweenCaptures = 30;
-    double maxTemplateOffset = sqrt(IMAGE_HEIGHT*IMAGE_HEIGHT + IMAGE_WIDTH*IMAGE_WIDTH) / 20.0;
 
     switch(mBoardType)
     {
@@ -228,14 +233,14 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
         mTemplateLocations.pop_back();
     if(mTemplateLocations.size() == delayBetweenCaptures && isTemplateFound)
     {
-        if(cv::norm(mTemplateLocations[0] - mTemplateLocations[delayBetweenCaptures - 1]) < maxTemplateOffset)
+        if(cv::norm(mTemplateLocations[0] - mTemplateLocations[delayBetweenCaptures - 1]) < mMaxTemplateOffset)
         {
             saveFrameData();
-            int baseLine = 400;
+            int baseLine = 600;
             cv::Size textSize = cv::getTextSize("Frame captured", 1, VIDEO_TEXT_SIZE, 2, &baseLine);
             cv::Point textOrigin(frameCopy.cols - 2*textSize.width - 10, frameCopy.rows - 2*baseLine - 10);
-            putText(frameCopy, "Frame captured", textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,255,0), 2);
-            cv::imshow(mainWindowName, frameCopy);
+            cv::putText(frame, "Frame captured", textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,255,0), 2);
+            cv::imshow(mainWindowName, frame);
             cv::waitKey(300);
             mCapuredFrames++;
 
@@ -243,8 +248,6 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
             mTemplateLocations.resize(delayBetweenCaptures);
         }
     }
-
-
 
     return frameCopy;
 }
@@ -268,6 +271,18 @@ CalibProcessor::~CalibProcessor()
 
 }
 
+void ShowProcessor::drawGridPoints(const cv::Mat &frame)
+{
+    for(auto it = mCalibdata->imagePoints.begin(); it != mCalibdata->imagePoints.end(); ++it)
+        for(auto pointIt = (*it).begin(); pointIt != (*it).end(); ++pointIt)
+            cv::circle(frame, *pointIt, POINT_SIZE, cv::Scalar(0, 255, 0));
+
+    for(auto it = mCalibdata->allCharucoCorners.begin(); it != mCalibdata->allCharucoCorners.end(); ++it)
+        for(int i = 0; i < (*it).size[0]; i++)
+            cv::circle(frame, cv::Point((int)(*it).at<float>(i, 0), (int)(*it).at<float>(i, 1)),
+                       POINT_SIZE, cv::Scalar(0, 255, 0));
+}
+
 ShowProcessor::ShowProcessor(Sptr<calibrationData> data) :
     mCalibdata(data)
 {
@@ -278,6 +293,7 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
 {
     if(mCalibdata->cameraMatrix.size[0] && mCalibdata->distCoeffs.size[0]) {
         cv::Mat frameCopy;
+        drawGridPoints(frame);
         cv::undistort(frame, frameCopy, mCalibdata->cameraMatrix, mCalibdata->distCoeffs,
                       cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, cv::Size(frame.rows, frame.cols), 1.0, cv::Size(frame.rows, frame.cols)));
         int baseLine = 400;
@@ -290,11 +306,11 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         baseLine = 100;
         textSize = cv::getTextSize(displayMessage, 1, VIDEO_TEXT_SIZE - 1, 2, &baseLine);
         textOrigin = cv::Point(20, 2*textSize.height);
-        cv::putText(frameCopy, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2);
+        cv::putText(frameCopy, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE - 1, cv::Scalar(0,0,255), 2);
 
         return frameCopy;
     }
-    cv::circle(frame, cv::Point2f(100, 100), 10, cv::Scalar(0, 255, 0), 10);
+
     return frame;
 }
 

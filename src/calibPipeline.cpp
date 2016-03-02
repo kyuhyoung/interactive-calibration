@@ -4,7 +4,7 @@
 
 using namespace calib;
 
-#define CAP_DELAY 3
+#define CAP_DELAY 10
 #define IMAGE_WIDTH 1280
 #define IMAGE_HEIGHT 960
 
@@ -14,7 +14,7 @@ CalibPipeline::CalibPipeline(captureParameters params) :
 
 }
 
-int CalibPipeline::start(std::vector<Sptr<FrameProcessor>> processors)
+PipelineExitStatus CalibPipeline::start(std::vector<Sptr<FrameProcessor>> processors)
 {
     cv::VideoCapture capture;
     if(mCaptureParams.source == InputVideoSource::Camera)
@@ -42,14 +42,22 @@ int CalibPipeline::start(std::vector<Sptr<FrameProcessor>> processors)
             processedFrame = (*it)->processFrame(processedFrame);
         cv::imshow(mainWindowName, processedFrame);
         int key = cv::waitKey(CAP_DELAY);
-        if(key == 27)
-            return -1;
+
+        if(key == 27) // esc
+            return PipelineExitStatus::Finished;
+        else if (key == 114) // r
+            return PipelineExitStatus::DeleteLastFrame;
+        else if (key == 100) // d
+            return PipelineExitStatus::DeleteAllFrames;
+        else if (key == 115) //s
+            return PipelineExitStatus::SaveCurrentData;
+
         for (auto it = processors.begin(); it != processors.end(); ++it)
             if((*it)->isProcessed())
-                return 0;
+                return PipelineExitStatus::Calibrate;
     }
 
-    return 0;
+    return PipelineExitStatus::Calibrate;
 }
 
 cv::Size CalibPipeline::getImageSize() const

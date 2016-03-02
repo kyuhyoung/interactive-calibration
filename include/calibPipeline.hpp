@@ -9,6 +9,7 @@
 namespace calib
 {
 
+enum class PipelineExitStatus { Finished, DeleteLastFrame, Calibrate, DeleteAllFrames, SaveCurrentData };
 
 class CalibPipeline
 {
@@ -18,7 +19,7 @@ protected:
 
 public:
     CalibPipeline(captureParameters params);
-    int start(std::vector<Sptr<FrameProcessor>> processors);
+    PipelineExitStatus start(std::vector<Sptr<FrameProcessor>> processors);
     cv::Size getImageSize() const;
 };
 
