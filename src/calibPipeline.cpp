@@ -16,24 +16,23 @@ CalibPipeline::CalibPipeline(captureParameters params) :
 
 PipelineExitStatus CalibPipeline::start(std::vector<Sptr<FrameProcessor>> processors)
 {
-    cv::VideoCapture capture;
-    if(mCaptureParams.source == InputVideoSource::Camera)
+    if(mCaptureParams.source == InputVideoSource::Camera && !mCapture.isOpened())
     {
-        capture.open(mCaptureParams.camID);
-        capture.set(CV_CAP_PROP_FRAME_WIDTH, IMAGE_WIDTH);
-        capture.set(CV_CAP_PROP_FRAME_HEIGHT, IMAGE_HEIGHT);
-        capture.set(CV_CAP_PROP_AUTOFOCUS, 0);
+        mCapture.open(mCaptureParams.camID);
+        mCapture.set(CV_CAP_PROP_FRAME_WIDTH, IMAGE_WIDTH);
+        mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, IMAGE_HEIGHT);
+        mCapture.set(CV_CAP_PROP_AUTOFOCUS, 0);
     }
-    else if (mCaptureParams.source == InputVideoSource::File)
-        capture.open(mCaptureParams.videoFileName);
-    mImageSize = cv::Size((int)capture.get(CV_CAP_PROP_FRAME_WIDTH), (int)capture.get(CV_CAP_PROP_FRAME_HEIGHT));
+    else if (mCaptureParams.source == InputVideoSource::File && !mCapture.isOpened())
+        mCapture.open(mCaptureParams.videoFileName);
+    mImageSize = cv::Size((int)mCapture.get(CV_CAP_PROP_FRAME_WIDTH), (int)mCapture.get(CV_CAP_PROP_FRAME_HEIGHT));
 
-    if(!capture.isOpened())
+    if(!mCapture.isOpened())
         throw std::runtime_error("Unable to open video source");
 
     cv::Mat frame, processedFrame;
-    while(capture.grab()) {
-        capture.retrieve(frame);
+    while(mCapture.grab()) {
+        mCapture.retrieve(frame);
         if(mCaptureParams.flipVertical)
             cv::flip(frame, frame, -1);
 

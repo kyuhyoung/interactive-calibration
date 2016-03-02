@@ -2,6 +2,7 @@
 #define CALIB_PIPELINE_HPP
 
 #include <vector>
+#include <opencv2/highgui.hpp>
 
 #include "calibCommon.hpp"
 #include "frameProcessor.hpp"
@@ -16,6 +17,7 @@ class CalibPipeline
 protected:
     captureParameters mCaptureParams;
     cv::Size mImageSize;
+    cv::VideoCapture mCapture;
 
 public:
     CalibPipeline(captureParameters params);

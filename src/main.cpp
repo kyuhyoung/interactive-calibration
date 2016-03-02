@@ -155,6 +155,8 @@ int main(int argc, char** argv)
                 globalData->allCharucoIds.clear();
                 globalData->cameraMatrix = globalData->distCoeffs = cv::Mat();
             }
+            else if (exitStatus == PipelineExitStatus::SaveCurrentData)
+                saveCalibrationParameters(globalData, parser.get<std::string>("of"));
 
             for (auto it = processors.begin(); it != processors.end(); ++it)
                         (*it)->resetState();
