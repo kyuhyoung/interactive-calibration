@@ -294,7 +294,7 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
     if(mCalibdata->cameraMatrix.size[0] && mCalibdata->distCoeffs.size[0]) {
         cv::Mat frameCopy;
 
-        if (mNeedUndistrot) {
+        if (mNeedUndistrot && (mCalibdata->allCharucoIds.size() > 3 || mCalibdata->imagePoints.size() > 3)) {
             drawGridPoints(frame);
             cv::undistort(frame, frameCopy, mCalibdata->cameraMatrix, mCalibdata->distCoeffs,
                           cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, cv::Size(frame.rows, frame.cols), 1.0, cv::Size(frame.rows, frame.cols)));
@@ -313,6 +313,10 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         cv::Size textSize = cv::getTextSize(displayMessage, 1, VIDEO_TEXT_SIZE - 1, 2, &baseLine);
         cv::Point textOrigin = cv::Point(20, 2*textSize.height);
         cv::putText(frameCopy, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE - 1, cv::Scalar(0,0,255), 2);
+
+        displayMessage = cv::format("DFx = %f DFy = %f", mCalibdata->stdDeviations.at<double>(0),
+                                                    mCalibdata->stdDeviations.at<double>(1));
+        cv::putText(frameCopy, displayMessage, cv::Point(20, 4*textSize.height), 1, VIDEO_TEXT_SIZE - 1, cv::Scalar(0,0,255), 2);
 
         return frameCopy;
     }

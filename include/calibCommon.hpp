@@ -17,6 +17,7 @@ namespace calib
     {
         cv::Mat cameraMatrix;
         cv::Mat distCoeffs;
+        cv::Mat stdDeviations;
         std::vector<cv::Mat> rvecs;
         std::vector<cv::Mat> tvecs;
         std::vector<float> reprojErrs;

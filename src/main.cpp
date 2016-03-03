@@ -11,6 +11,7 @@
 #include "calibCommon.hpp"
 #include "calibPipeline.hpp"
 #include "frameProcessor.hpp"
+#include "cvCalibrationFork.hpp"
 
 using namespace calib;
 
@@ -115,9 +116,12 @@ int main(int argc, char** argv)
 
                 //std::cout << "calibration started\n";
                 if(capParams.board != TemplateType::chAruco)
-                    globalData->totalAvgErr = cv::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
-                                    globalData->distCoeffs, globalData->rvecs, globalData->tvecs, 0, cv::TermCriteria(
+                {
+                    globalData->totalAvgErr = cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
+                                    globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, 0, cv::TermCriteria(
                                         cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-5) );
+                    //std::cout << "Deviations\n" << globalData->stdDeviations << "\n";
+                }
                 else {
                     cv::Ptr<cv::aruco::Dictionary> dictionary =
                             cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(0));
@@ -125,7 +129,7 @@ int main(int argc, char** argv)
                                 cv::aruco::CharucoBoard::create(6, 8, 200, 100, dictionary);
                     globalData->totalAvgErr =
                             cv::aruco::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds, charucoboard, globalData->imageSize,
-                                                          globalData->cameraMatrix, globalData->distCoeffs, globalData->rvecs, globalData->tvecs, 0, cv::TermCriteria(
+                                                          globalData->cameraMatrix, globalData->distCoeffs, cv::noArray(), cv::noArray(), 0, cv::TermCriteria(
                                                                   cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-5));
                 }
             }

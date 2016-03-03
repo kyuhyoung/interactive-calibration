@@ -1,12 +1,22 @@
 #include <opencv2/calib3d.hpp>
 #include "cvCalibrationFork.hpp"
+#include <iostream>
 
 static const char* cvDistCoeffErr = "Distortion coefficients must be 1x4, 4x1, 1x5, 5x1, 1x8, 8x1, 1x12, 12x1, 1x14 or 14x1 floating-point vector";
+
+/*
+static double stdDev(const Mat& errors)
+{
+    double errNorm = norm(errors, NORM_L2SQR);
+    return errNorm / ();
+}
+*/
+
 
 double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
                     const CvMat* imagePoints, const CvMat* npoints,
                     CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs,
-                    CvMat* rvecs, CvMat* tvecs, int flags, CvTermCriteria termCrit )
+                    CvMat* rvecs, CvMat* tvecs, CvMat* stdDevs, int flags, CvTermCriteria termCrit )
 {
     const int NINTRINSIC = 18;
     double reprojErr = 0;
@@ -66,6 +76,18 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
             (tvecs->rows != 1 || tvecs->cols != nimages || cn != 3)) )
             CV_Error( CV_StsBadArg, "the output array of translation vectors must be 3-channel "
                 "1xn or nx1 array or 1-channel nx3 array, where n is the number of views" );
+    }
+
+    if( stdDevs )
+    {
+        cn = CV_MAT_CN(stdDevs->type);
+        std:: cout << "rows " << stdDevs->rows << " cols " << stdDevs->cols << "\n";
+        if( !CV_IS_MAT(stdDevs) ||
+            (CV_MAT_DEPTH(stdDevs->type) != CV_32F && CV_MAT_DEPTH(stdDevs->type) != CV_64F) ||
+            ((stdDevs->rows != (nimages*6 + NINTRINSIC) || stdDevs->cols*cn != 1) &&
+            (stdDevs->rows != 1 || stdDevs->cols != (nimages*6 + NINTRINSIC) || cn != 1)) )
+            CV_Error( CV_StsBadArg, "the output array of standard deviations vectors must be 1-channel "
+                "1x(n*6 + NINTRINSIC) or (n*6 + NINTRINSIC)x1 array, where n is the number of views" );
     }
 
     if( (CV_MAT_TYPE(cameraMatrix->type) != CV_32FC1 &&
@@ -176,6 +198,7 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
     }
 
     CvLevMarq solver( nparams, 0, termCrit );
+    Mat JtJcopy, allErrors(1, total, CV_64FC2);
 
     if(flags & CALIB_USE_LU) {
         solver.solveMethod = DECOMP_LU;
@@ -258,8 +281,23 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
         A(0, 0) = param[0]; A(1, 1) = param[1]; A(0, 2) = param[2]; A(1, 2) = param[3];
         std::copy(param + 4, param + 4 + 14, k);
 
-        if( !proceed )
+        if( !proceed ) {
+            //do error estimation
+            if(JtJcopy.total() && stdDevs) {
+                Mat JtJinv;
+                invert(JtJcopy, JtJinv, DECOMP_SVD);
+                double sigma2 = norm(allErrors, NORM_L2SQR) / (total - 6*nimages - NINTRINSIC);
+                Mat stdDevsM = cvarrToMat(stdDevs);
+                uchar* mask = solver.mask->data.ptr;
+
+                for (int i = 0; i < nparams; i++)
+                    if(mask[i])
+                        stdDevsM.at<double>(i) = std::sqrt(JtJinv.at<double>(i,i)*sigma2);
+                    else
+                        stdDevsM.at<double>(i) = 0;
+            }
             break;
+        }
 
         reprojErr = 0;
 
@@ -273,6 +311,7 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
 
             CvMat _Mi(matM.colRange(pos, pos + ni));
             CvMat _mi(_m.colRange(pos, pos + ni));
+            CvMat _me(allErrors.colRange(pos, pos + ni));
 
             _Je.resize(ni*2); _Ji.resize(ni*2); _err.resize(ni*2);
             CvMat _dpdr(_Je.colRange(0, 3));
@@ -305,6 +344,8 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
 
                 JtErr.rowRange(0, NINTRINSIC) += _Ji.t() * _err;
                 JtErr.rowRange(NINTRINSIC + i * 6, NINTRINSIC + (i + 1) * 6) = _Je.t() * _err;
+                JtJ.copyTo(JtJcopy);
+                cvCopy(&_mp, &_me);
             }
 
             reprojErr += norm(_err, NORM_L2SQR);
@@ -440,7 +481,7 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
 double cvfork::calibrateCamera( InputArrayOfArrays _objectPoints,
                             InputArrayOfArrays _imagePoints,
                             Size imageSize, InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
-                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, int flags, TermCriteria criteria )
+                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, OutputArray _stdDeviations, int flags, TermCriteria criteria )
 {
     int rtype = CV_64F;
     Mat cameraMatrix = _cameraMatrix.getMat();
@@ -454,12 +495,15 @@ double cvfork::calibrateCamera( InputArrayOfArrays _objectPoints,
 
     int nimages = int(_objectPoints.total());
     CV_Assert( nimages > 0 );
-    Mat objPt, imgPt, npoints, rvecM, tvecM;
+    Mat objPt, imgPt, npoints, rvecM, tvecM, stdDeviationsM;
 
-    bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed();
+    bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed(),
+            stddev_needed = _stdDeviations.needed();
 
     bool rvecs_mat_vec = _rvecs.isMatVector();
     bool tvecs_mat_vec = _tvecs.isMatVector();
+    bool stddev_vec = _stdDeviations.isVector();
+    CV_Assert( !stddev_vec );
 
     if( rvecs_needed ) {
         _rvecs.create(nimages, 1, CV_64FC3);
@@ -479,16 +523,26 @@ double cvfork::calibrateCamera( InputArrayOfArrays _objectPoints,
             tvecM = _tvecs.getMat();
     }
 
+    if( stddev_needed ) {
+        _stdDeviations.create(nimages*6 + 18, 1, CV_64F);
+
+        if(stddev_vec)
+            stdDeviationsM.create(nimages*6 + 18, 1, CV_64F);
+        else
+            stdDeviationsM = _stdDeviations.getMat();
+    }
+
     collectCalibrationData( _objectPoints, _imagePoints, noArray(),
                             objPt, imgPt, 0, npoints );
     CvMat c_objPt = objPt, c_imgPt = imgPt, c_npoints = npoints;
     CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
-    CvMat c_rvecM = rvecM, c_tvecM = tvecM;
+    CvMat c_rvecM = rvecM, c_tvecM = tvecM, c_stdDev = stdDeviationsM;
 
     double reprojErr = cvfork::cvCalibrateCamera2(&c_objPt, &c_imgPt, &c_npoints, imageSize,
                                           &c_cameraMatrix, &c_distCoeffs,
                                           rvecs_needed ? &c_rvecM : NULL,
-                                          tvecs_needed ? &c_tvecM : NULL, flags, criteria );
+                                          tvecs_needed ? &c_tvecM : NULL,
+                                          stddev_needed ? &c_stdDev : NULL, flags, criteria );
 
     // overly complicated and inefficient rvec/ tvec handling to support vector<Mat>
     for(int i = 0; i < nimages; i++ )
