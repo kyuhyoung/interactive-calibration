@@ -35,10 +35,11 @@ namespace calib
     {
         cv::Mat cameraMatrix;
         cv::Mat distCoeffs;
+        cv::Mat stdDeviations;
 
         cameraParameters(){}
-        cameraParameters(cv::Mat& _cameraMatrix, cv::Mat& _distCoeffs) :
-            cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs)
+        cameraParameters(cv::Mat& _cameraMatrix, cv::Mat& _distCoeffs, cv::Mat& _stdDeviations) :
+            cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs), stdDeviations(_stdDeviations)
         {}
     };
 

@@ -36,7 +36,9 @@ void saveCalibrationParameters(Sptr<calibrationData> data, const std::string& fi
     parametersWriter << "calibrationDate" << asctime(localtime(&rawtime));
     parametersWriter << "framesCount" << (int)data->rvecs.size();
     parametersWriter << "cameraMatrix" << data->cameraMatrix;
+    parametersWriter << "cameraMatrix_std_dev" << data->stdDeviations.rowRange(cv::Range(0, 4));
     parametersWriter << "dist_coeffs" << data->distCoeffs;
+    parametersWriter << "dist_coeffs_std_dev" << data->stdDeviations.rowRange(cv::Range(4, 9));
     parametersWriter << "avg_reprojection_error" << data->totalAvgErr;
 
     parametersWriter.release();
@@ -100,6 +102,8 @@ int main(int argc, char** argv)
 
     std::stack<cameraParameters> paramsStack;
 
+    int calibrationFlags = 0;//CV_CALIB_FIX_K3 | CV_CALIB_ZERO_TANGENT_DIST;
+
     try {
         while(true)
         {
@@ -108,17 +112,18 @@ int main(int argc, char** argv)
                 break;
             else if (exitStatus == PipelineExitStatus::Calibrate) {
 
-                cv::Mat oldCameraMat, oldDistcoeefs;
+                cv::Mat oldCameraMat, oldDistcoeefs, oldStdDevs;
                 globalData->cameraMatrix.copyTo(oldCameraMat);
                 globalData->distCoeffs.copyTo(oldDistcoeefs);
-                paramsStack.push(cameraParameters(oldCameraMat, oldDistcoeefs));
+                globalData->stdDeviations.copyTo(oldStdDevs);
+                paramsStack.push(cameraParameters(oldCameraMat, oldDistcoeefs, oldStdDevs));
                 globalData->imageSize = pipeline->getImageSize();
 
                 //std::cout << "calibration started\n";
                 if(capParams.board != TemplateType::chAruco)
                 {
                     globalData->totalAvgErr = cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
-                                    globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, 0, cv::TermCriteria(
+                                    globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, calibrationFlags, cv::TermCriteria(
                                         cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-5) );
                     //std::cout << "Deviations\n" << globalData->stdDeviations << "\n";
                 }
@@ -128,9 +133,9 @@ int main(int argc, char** argv)
                     cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
                                 cv::aruco::CharucoBoard::create(6, 8, 200, 100, dictionary);
                     globalData->totalAvgErr =
-                            cv::aruco::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds, charucoboard, globalData->imageSize,
-                                                          globalData->cameraMatrix, globalData->distCoeffs, cv::noArray(), cv::noArray(), 0, cv::TermCriteria(
-                                                                  cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-5));
+                            cvfork::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds, charucoboard, globalData->imageSize,
+                                                          globalData->cameraMatrix, globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, calibrationFlags,
+                                                           cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-5));
                 }
             }
             else if (exitStatus == PipelineExitStatus::DeleteLastFrame)
@@ -147,6 +152,7 @@ int main(int argc, char** argv)
                 if(!paramsStack.empty()) {
                     globalData->cameraMatrix = (paramsStack.top()).cameraMatrix;
                     globalData->distCoeffs = (paramsStack.top()).distCoeffs;
+                    globalData->stdDeviations = (paramsStack.top()).stdDeviations;
                     paramsStack.pop();
                 }
             }
@@ -165,7 +171,7 @@ int main(int argc, char** argv)
             for (auto it = processors.begin(); it != processors.end(); ++it)
                         (*it)->resetState();
         }
-        saveCalibrationParameters(globalData, parser.get<std::string>("of"));
+        //saveCalibrationParameters(globalData, parser.get<std::string>("of"));
     }
     catch (std::runtime_error exp)
     {

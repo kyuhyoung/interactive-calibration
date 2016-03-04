@@ -307,15 +307,15 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
             frame.copyTo(frameCopy);
             drawGridPoints(frameCopy);
         }
-        std::string displayMessage = cv::format("Fx = %d Fy = %d RMS = %f", (int)mCalibdata->cameraMatrix.at<double>(0,0),
+        std::string displayMessage = cv::format("Fx = %d Fy = %d RMS = %.3f", (int)mCalibdata->cameraMatrix.at<double>(0,0),
                                             (int)mCalibdata->cameraMatrix.at<double>(1,1), mCalibdata->totalAvgErr);
         int baseLine = 100;
         cv::Size textSize = cv::getTextSize(displayMessage, 1, VIDEO_TEXT_SIZE - 1, 2, &baseLine);
         cv::Point textOrigin = cv::Point(20, 2*textSize.height);
         cv::putText(frameCopy, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE - 1, cv::Scalar(0,0,255), 2);
 
-        displayMessage = cv::format("DFx = %f DFy = %f", mCalibdata->stdDeviations.at<double>(0),
-                                                    mCalibdata->stdDeviations.at<double>(1));
+        displayMessage = cv::format("DFx = %.2f DFy = %.2f", mCalibdata->stdDeviations.at<double>(0)*1.96,
+                                                    mCalibdata->stdDeviations.at<double>(1)*1.96);
         cv::putText(frameCopy, displayMessage, cv::Point(20, 4*textSize.height), 1, VIDEO_TEXT_SIZE - 1, cv::Scalar(0,0,255), 2);
 
         return frameCopy;

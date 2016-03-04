@@ -18,7 +18,7 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
                     CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs,
                     CvMat* rvecs, CvMat* tvecs, CvMat* stdDevs, int flags, CvTermCriteria termCrit )
 {
-    const int NINTRINSIC = 18;
+    const int NINTRINSIC = CV_CALIB_NINTRINSIC;
     double reprojErr = 0;
 
     Matx33d A;
@@ -81,7 +81,6 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
     if( stdDevs )
     {
         cn = CV_MAT_CN(stdDevs->type);
-        std:: cout << "rows " << stdDevs->rows << " cols " << stdDevs->cols << "\n";
         if( !CV_IS_MAT(stdDevs) ||
             (CV_MAT_DEPTH(stdDevs->type) != CV_32F && CV_MAT_DEPTH(stdDevs->type) != CV_64F) ||
             ((stdDevs->rows != (nimages*6 + NINTRINSIC) || stdDevs->cols*cn != 1) &&
@@ -289,12 +288,12 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
                 double sigma2 = norm(allErrors, NORM_L2SQR) / (total - 6*nimages - NINTRINSIC);
                 Mat stdDevsM = cvarrToMat(stdDevs);
                 uchar* mask = solver.mask->data.ptr;
-
-                for (int i = 0; i < nparams; i++)
+                for (int i = 0; i < nparams; i++){
                     if(mask[i])
                         stdDevsM.at<double>(i) = std::sqrt(JtJinv.at<double>(i,i)*sigma2);
                     else
                         stdDevsM.at<double>(i) = 0;
+                }
             }
             break;
         }
@@ -344,8 +343,10 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
 
                 JtErr.rowRange(0, NINTRINSIC) += _Ji.t() * _err;
                 JtErr.rowRange(NINTRINSIC + i * 6, NINTRINSIC + (i + 1) * 6) = _Je.t() * _err;
-                JtJ.copyTo(JtJcopy);
-                cvCopy(&_mp, &_me);
+                if (stdDevs) {
+                    JtJ.copyTo(JtJcopy);
+                    cvCopy(&_mp, &_me);
+                }
             }
 
             reprojErr += norm(_err, NORM_L2SQR);
@@ -524,10 +525,10 @@ double cvfork::calibrateCamera( InputArrayOfArrays _objectPoints,
     }
 
     if( stddev_needed ) {
-        _stdDeviations.create(nimages*6 + 18, 1, CV_64F);
+        _stdDeviations.create(nimages*6 + CV_CALIB_NINTRINSIC, 1, CV_64F);
 
         if(stddev_vec)
-            stdDeviationsM.create(nimages*6 + 18, 1, CV_64F);
+            stdDeviationsM.create(nimages*6 + CV_CALIB_NINTRINSIC, 1, CV_64F);
         else
             stdDeviationsM = _stdDeviations.getMat();
     }
@@ -565,4 +566,31 @@ double cvfork::calibrateCamera( InputArrayOfArrays _objectPoints,
     distCoeffs.copyTo(_distCoeffs);
 
     return reprojErr;
+}
+
+double cvfork::calibrateCameraCharuco(InputArrayOfArrays _charucoCorners, InputArrayOfArrays _charucoIds,
+                              Ptr<aruco::CharucoBoard> &_board, Size imageSize,
+                              InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
+                              OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, OutputArray _stdDeviations, int flags,
+                              TermCriteria criteria) {
+
+    CV_Assert(_charucoIds.total() > 0 && (_charucoIds.total() == _charucoCorners.total()));
+
+    // Join object points of charuco corners in a single vector for calibrateCamera() function
+    std::vector< std::vector< Point3f > > allObjPoints;
+    allObjPoints.resize(_charucoIds.total());
+    for(unsigned int i = 0; i < _charucoIds.total(); i++) {
+        unsigned int nCorners = (unsigned int)_charucoIds.getMat(i).total();
+        CV_Assert(nCorners > 0 && nCorners == _charucoCorners.getMat(i).total());
+        allObjPoints[i].reserve(nCorners);
+
+        for(unsigned int j = 0; j < nCorners; j++) {
+            int pointId = _charucoIds.getMat(i).ptr< int >(0)[j];
+            CV_Assert(pointId >= 0 && pointId < (int)_board->chessboardCorners.size());
+            allObjPoints[i].push_back(_board->chessboardCorners[pointId]);
+        }
+    }
+
+    return cvfork::calibrateCamera(allObjPoints, _charucoCorners, imageSize, _cameraMatrix, _distCoeffs,
+                           _rvecs, _tvecs, _stdDeviations, flags, criteria);
 }
