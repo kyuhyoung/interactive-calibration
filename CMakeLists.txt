@@ -12,6 +12,7 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(OpenCV REQUIRED)
+find_package(LAPACK REQUIRED)
 
 set (PROJECT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set (PROJECT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -22,5 +23,4 @@ include_directories("${PROJECT_INCLUDE_DIR}")
 file(GLOB SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${PROJECT_INCLUDE_DIR}/*.hpp)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
-target_link_libraries( ${PROJECT_NAME} ${OpenCV_LIBRARIES} )
-
+target_link_libraries( ${PROJECT_NAME} ${OpenCV_LIBRARIES} ${LAPACK_LIBRARIES})

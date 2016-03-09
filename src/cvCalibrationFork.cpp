@@ -1,6 +1,9 @@
 #include <opencv2/calib3d.hpp>
+#include "linalg.hpp"
 #include "cvCalibrationFork.hpp"
 #include <iostream>
+
+using namespace cv;
 
 static const char* cvDistCoeffErr = "Distortion coefficients must be 1x4, 4x1, 1x5, 5x1, 1x8, 8x1, 1x12, 12x1, 1x14 or 14x1 floating-point vector";
 
@@ -196,7 +199,8 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
         cvInitIntrinsicParams2D( &_matM, &m, npoints, imageSize, &matA, aspectRatio );
     }
 
-    CvLevMarq solver( nparams, 0, termCrit );
+    //CvLevMarq solver( nparams, 0, termCrit );
+    cvfork::CvLevMarqFork solver( nparams, 0, termCrit );
     Mat JtJcopy, allErrors(1, total, CV_64FC2);
 
     if(flags & CALIB_USE_LU) {
@@ -284,7 +288,7 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
             //do error estimation
             if(JtJcopy.total() && stdDevs) {
                 Mat JtJinv;
-                invert(JtJcopy, JtJinv, DECOMP_SVD);
+                cvfork::invert(JtJcopy, JtJinv, DECOMP_SVD);
                 double sigma2 = norm(allErrors, NORM_L2SQR) / (total - 6*nimages - NINTRINSIC);
                 Mat stdDevsM = cvarrToMat(stdDevs);
                 uchar* mask = solver.mask->data.ptr;
@@ -593,4 +597,149 @@ double cvfork::calibrateCameraCharuco(InputArrayOfArrays _charucoCorners, InputA
 
     return cvfork::calibrateCamera(allObjPoints, _charucoCorners, imageSize, _cameraMatrix, _distCoeffs,
                            _rvecs, _tvecs, _stdDeviations, flags, criteria);
+}
+
+
+namespace {
+static void subMatrix(const cv::Mat& src, cv::Mat& dst, const std::vector<uchar>& cols,
+                      const std::vector<uchar>& rows) {
+    int nonzeros_cols = cv::countNonZero(cols);
+    cv::Mat tmp(src.rows, nonzeros_cols, CV_64FC1);
+
+    for (int i = 0, j = 0; i < (int)cols.size(); i++)
+    {
+        if (cols[i])
+        {
+            src.col(i).copyTo(tmp.col(j++));
+        }
+    }
+
+    int nonzeros_rows  = cv::countNonZero(rows);
+    dst.create(nonzeros_rows, nonzeros_cols, CV_64FC1);
+    for (int i = 0, j = 0; i < (int)rows.size(); i++)
+    {
+        if (rows[i])
+        {
+            tmp.row(i).copyTo(dst.row(j++));
+        }
+    }
+}
+
+}
+
+void cvfork::CvLevMarqFork::step()
+{
+    using namespace cv;
+    const double LOG10 = log(10.);
+    double lambda = exp(lambdaLg10*LOG10);
+    int nparams = param->rows;
+
+    Mat _JtJ = cvarrToMat(JtJ);
+    Mat _mask = cvarrToMat(mask);
+
+    int nparams_nz = countNonZero(_mask);
+    if(!JtJN || JtJN->rows != nparams_nz) {
+        // prevent re-allocation in every step
+        JtJN.reset(cvCreateMat( nparams_nz, nparams_nz, CV_64F ));
+        JtJV.reset(cvCreateMat( nparams_nz, 1, CV_64F ));
+        JtJW.reset(cvCreateMat( nparams_nz, 1, CV_64F ));
+    }
+
+    Mat _JtJN = cvarrToMat(JtJN);
+    Mat _JtErr = cvarrToMat(JtJV);
+    Mat_<double> nonzero_param = cvarrToMat(JtJW);
+
+    subMatrix(cvarrToMat(JtErr), _JtErr, std::vector<uchar>(1, 1), _mask);
+    subMatrix(_JtJ, _JtJN, _mask, _mask);
+
+    if( !err )
+        completeSymm( _JtJN, completeSymmFlag );
+#if 1
+    _JtJN.diag() *= 1. + lambda;
+#else
+    _JtJN.diag() += lambda;
+#endif
+    cvfork::solve(_JtJN, _JtErr, nonzero_param, solveMethod);
+
+    int j = 0;
+    for( int i = 0; i < nparams; i++ )
+        param->data.db[i] = prevParam->data.db[i] - (mask->data.ptr[i] ? nonzero_param(j++) : 0);
+}
+
+cvfork::CvLevMarqFork::CvLevMarqFork(int nparams, int nerrs, CvTermCriteria criteria0, bool _completeSymmFlag)
+{
+    init(nparams, nerrs, criteria0, _completeSymmFlag);
+}
+
+cvfork::CvLevMarqFork::~CvLevMarqFork()
+{
+    clear();
+}
+
+bool cvfork::CvLevMarqFork::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, double*& _errNorm )
+{
+    CV_Assert( !err );
+    if( state == DONE )
+    {
+        _param = param;
+        return false;
+    }
+
+    if( state == STARTED )
+    {
+        _param = param;
+        cvZero( JtJ );
+        cvZero( JtErr );
+        errNorm = 0;
+        _JtJ = JtJ;
+        _JtErr = JtErr;
+        _errNorm = &errNorm;
+        state = CALC_J;
+        return true;
+    }
+
+    if( state == CALC_J )
+    {
+        cvCopy( param, prevParam );
+        step();
+        _param = param;
+        prevErrNorm = errNorm;
+        errNorm = 0;
+        _errNorm = &errNorm;
+        state = CHECK_ERR;
+        return true;
+    }
+
+    assert( state == CHECK_ERR );
+    if( errNorm > prevErrNorm )
+    {
+        if( ++lambdaLg10 <= 16 )
+        {
+            step();
+            _param = param;
+            errNorm = 0;
+            _errNorm = &errNorm;
+            state = CHECK_ERR;
+            return true;
+        }
+    }
+
+    lambdaLg10 = MAX(lambdaLg10-1, -16);
+    if( ++iters >= criteria.max_iter ||
+        cvNorm(param, prevParam, CV_RELATIVE_L2) < criteria.epsilon )
+    {
+        printf("iters %i\n", iters);
+        _param = param;
+        state = DONE;
+        return false;
+    }
+
+    prevErrNorm = errNorm;
+    cvZero( JtJ );
+    cvZero( JtErr );
+    _param = param;
+    _JtJ = JtJ;
+    _JtErr = JtErr;
+    state = CALC_J;
+    return true;
 }

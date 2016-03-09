@@ -3,11 +3,11 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/aruco/charuco.hpp>
-
-using namespace cv;
+#include <opencv2/calib3d.hpp>
 
 namespace cvfork
 {
+using namespace cv;
 
 #define CV_CALIB_NINTRINSIC 18
 
@@ -37,6 +37,17 @@ double calibrateCameraCharuco(InputArrayOfArrays _charucoCorners, InputArrayOfAr
                               OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, OutputArray _stdDeviations, int flags = 0,
                               TermCriteria criteria = TermCriteria(
                                     TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
+
+class CvLevMarqFork : public CvLevMarq
+{
+public:
+    CvLevMarqFork( int nparams, int nerrs, CvTermCriteria criteria=
+              cvTermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER,30,DBL_EPSILON),
+              bool completeSymmFlag=false );
+    bool updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat*& _JtErr, double*& _errNorm );
+    void step();
+    ~CvLevMarqFork();
+};
 }
 
 #endif

@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 
     std::stack<cameraParameters> paramsStack;
 
-    int calibrationFlags = 0;//CV_CALIB_FIX_K3 | CV_CALIB_ZERO_TANGENT_DIST;
+    int calibrationFlags = 0;//cv::CALIB_USE_LU;//CV_CALIB_FIX_K3 | CV_CALIB_ZERO_TANGENT_DIST;
 
     try {
         while(true)
