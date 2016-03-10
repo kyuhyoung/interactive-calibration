@@ -1,20 +1,10 @@
 #include <opencv2/calib3d.hpp>
 #include "linalg.hpp"
 #include "cvCalibrationFork.hpp"
-#include <iostream>
 
 using namespace cv;
 
 static const char* cvDistCoeffErr = "Distortion coefficients must be 1x4, 4x1, 1x5, 5x1, 1x8, 8x1, 1x12, 12x1, 1x14 or 14x1 floating-point vector";
-
-/*
-static double stdDev(const Mat& errors)
-{
-    double errNorm = norm(errors, NORM_L2SQR);
-    return errNorm / ();
-}
-*/
-
 
 double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
                     const CvMat* imagePoints, const CvMat* npoints,
@@ -285,20 +275,19 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
         std::copy(param + 4, param + 4 + 14, k);
 
         if( !proceed ) {
-            //do error estimation
+            //do errors estimation
             if(JtJcopy.total() && stdDevs) {
                 Mat JtJinv;
+#ifndef USE_LAPACK
+                cv::invert(JtJcopy, JtJinv, DECOMP_SVD);
+#else
                 cvfork::invert(JtJcopy, JtJinv, DECOMP_SVD);
+#endif
                 double sigma2 = norm(allErrors, NORM_L2SQR) / (total - 6*nimages - NINTRINSIC);
                 Mat stdDevsM = cvarrToMat(stdDevs);
                 uchar* mask = solver.mask->data.ptr;
-                for (int i = 0; i < nparams; i++){
-                    if(mask[i])
-                        stdDevsM.at<double>(i) = std::sqrt(JtJinv.at<double>(i,i)*sigma2);
-                    else
-                        stdDevsM.at<double>(i) = 0;
-                }
-            }
+                for (int i = 0; i < nparams; i++)
+                    stdDevsM.at<double>(i) = mask[i] ? std::sqrt(JtJinv.at<double>(i,i)*sigma2) : 0;            }
             break;
         }
 
@@ -347,14 +336,14 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
 
                 JtErr.rowRange(0, NINTRINSIC) += _Ji.t() * _err;
                 JtErr.rowRange(NINTRINSIC + i * 6, NINTRINSIC + (i + 1) * 6) = _Je.t() * _err;
-                if (stdDevs) {
-                    JtJ.copyTo(JtJcopy);
+                if (stdDevs)
                     cvCopy(&_mp, &_me);
-                }
             }
 
             reprojErr += norm(_err, NORM_L2SQR);
         }
+        if(solver.state == CvLevMarq::CALC_J)
+            cvarrToMat(_JtJ).copyTo(JtJcopy);
         if( _errNorm )
             *_errNorm = reprojErr;
     }
@@ -585,7 +574,7 @@ double cvfork::calibrateCameraCharuco(InputArrayOfArrays _charucoCorners, InputA
     allObjPoints.resize(_charucoIds.total());
     for(unsigned int i = 0; i < _charucoIds.total(); i++) {
         unsigned int nCorners = (unsigned int)_charucoIds.getMat(i).total();
-        CV_Assert(nCorners > 0 && nCorners == _charucoCorners.getMat(i).total());
+        CV_Assert(nCorners > 0 && nCorners == _charucoCorners.getMat(i).total()); //actually nCorners must be > 3 for calibration
         allObjPoints[i].reserve(nCorners);
 
         for(unsigned int j = 0; j < nCorners; j++) {
@@ -659,7 +648,11 @@ void cvfork::CvLevMarqFork::step()
 #else
     _JtJN.diag() += lambda;
 #endif
+#ifndef USE_LAPACK
+    cv::solve(_JtJN, _JtErr, nonzero_param, solveMethod);
+#else
     cvfork::solve(_JtJN, _JtErr, nonzero_param, solveMethod);
+#endif
 
     int j = 0;
     for( int i = 0; i < nparams; i++ )

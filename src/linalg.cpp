@@ -1,5 +1,7 @@
 #include "linalg.hpp"
 
+#ifdef USE_LAPACK
+
 #ifdef HAVE_VECLIB
   #include <vecLib/clapack.h>
 
@@ -491,3 +493,5 @@ double cvfork::invert( InputArray _src, OutputArray _dst, int method )
              w.ptr<double>()[n-1]/w.ptr<double>()[0] : 0);
     }
 }
+
+#endif //USE_LAPACK

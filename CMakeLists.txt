@@ -4,6 +4,15 @@ set(PROJECT_NAME_STR interactive-calibration)
 
 project (${PROJECT_NAME_STR})
 
+option(USE_LAPACK "use lapack for SVD" ON)
+
+if(USE_LAPACK)
+    add_definitions(-DUSE_LAPACK)
+    find_package(LAPACK REQUIRED)
+else()
+    set(LAPACK_LIBRARIES "")
+endif()
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   add_definitions(-Wno-deprecated -std=c++11 -fpermissive)
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
@@ -12,7 +21,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(OpenCV REQUIRED)
-find_package(LAPACK REQUIRED)
 
 set (PROJECT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set (PROJECT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
