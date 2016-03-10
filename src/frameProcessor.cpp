@@ -82,7 +82,7 @@ bool CalibProcessor::detectAndParseChAruco(const cv::Mat &frame)
                                          currentCharucoIds);
     if(ids.size() > 0) cv::aruco::drawDetectedMarkers(frame, corners);
 
-    if(currentCharucoCorners.total() > 0) {
+    if(currentCharucoCorners.total() > 3) {
         float centerX = 0, centerY = 0;
         for (int i = 0; i < currentCharucoCorners.size[0]; i++) {
             centerX += currentCharucoCorners.at<float>(i, 0);
@@ -236,10 +236,11 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
         if(cv::norm(mTemplateLocations[0] - mTemplateLocations[delayBetweenCaptures - 1]) < mMaxTemplateOffset)
         {
             saveFrameData();
-            int baseLine = 600;
-            cv::Size textSize = cv::getTextSize("Frame captured", 1, VIDEO_TEXT_SIZE, 2, &baseLine);
-            cv::Point textOrigin(frameCopy.cols - 2*textSize.width - 10, frameCopy.rows - 2*baseLine - 10);
-            cv::putText(frame, "Frame captured", textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,255,0), 2);
+            int baseLine = 400;
+            std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibdata->imagePoints.size(),
+                                                                                    mCalibdata->allCharucoCorners.size()));
+            cv::Point textOrigin(frameCopy.cols / 10, frameCopy.rows - 2*baseLine - 10);
+            cv::putText(frame, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2);
             cv::imshow(mainWindowName, frame);
             cv::waitKey(300);
             mCapuredFrames++;
@@ -301,7 +302,7 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
             int baseLine = 400;
             cv::Size textSize = cv::getTextSize("Undistorted view", 1, VIDEO_TEXT_SIZE, 2, &baseLine);
             cv::Point textOrigin(frame.cols - 2*textSize.width - 10, frame.rows - 2*baseLine - 10);
-            cv::putText(frameCopy, "Undistorted view", textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,255,0), 2);
+            cv::putText(frameCopy, "Undistorted view", textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2);
         }
         else {
             frame.copyTo(frameCopy);

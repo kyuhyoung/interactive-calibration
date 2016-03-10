@@ -5,6 +5,7 @@
 #include <vector>
 #include <stack>
 #include <exception>
+#include <algorithm>
 #include <iostream>
 #include <ctime>
 
@@ -34,7 +35,7 @@ void saveCalibrationParameters(Sptr<calibrationData> data, const std::string& fi
     time_t rawtime;
     time(&rawtime);
     parametersWriter << "calibrationDate" << asctime(localtime(&rawtime));
-    parametersWriter << "framesCount" << (int)data->rvecs.size();
+    parametersWriter << "framesCount" << std::max((int)data->objectPoints.size(), (int)data->allCharucoCorners.size());
     parametersWriter << "cameraMatrix" << data->cameraMatrix;
     parametersWriter << "cameraMatrix_std_dev" << data->stdDeviations.rowRange(cv::Range(0, 4));
     parametersWriter << "dist_coeffs" << data->distCoeffs;
@@ -119,13 +120,11 @@ int main(int argc, char** argv)
                 paramsStack.push(cameraParameters(oldCameraMat, oldDistcoeefs, oldStdDevs));
                 globalData->imageSize = pipeline->getImageSize();
 
-                //std::cout << "calibration started\n";
                 if(capParams.board != TemplateType::chAruco)
                 {
                     globalData->totalAvgErr = cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
                                     globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, calibrationFlags, cv::TermCriteria(
-                                        cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-5) );
-                    //std::cout << "Deviations\n" << globalData->stdDeviations << "\n";
+                                        cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7) );
                 }
                 else {
                     cv::Ptr<cv::aruco::Dictionary> dictionary =
@@ -171,7 +170,6 @@ int main(int argc, char** argv)
             for (auto it = processors.begin(); it != processors.end(); ++it)
                         (*it)->resetState();
         }
-        //saveCalibrationParameters(globalData, parser.get<std::string>("of"));
     }
     catch (std::runtime_error exp)
     {
