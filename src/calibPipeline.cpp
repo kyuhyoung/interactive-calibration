@@ -8,8 +8,8 @@ using namespace calib;
 #define IMAGE_WIDTH 1280
 #define IMAGE_HEIGHT 960
 
-CalibPipeline::CalibPipeline(captureParameters params) :
-    mCaptureParams(params)
+CalibPipeline::CalibPipeline(captureParameters params, Sptr<calibController> controller) :
+    mCaptureParams(params), mController(controller)
 {
 
 }
@@ -54,8 +54,10 @@ PipelineExitStatus CalibPipeline::start(std::vector<Sptr<FrameProcessor>> proces
             return PipelineExitStatus::SwitchUndistort;
 
         for (auto it = processors.begin(); it != processors.end(); ++it)
-            if((*it)->isProcessed())
+            if((*it)->isProcessed()) {
+                mController->updateState();
                 return PipelineExitStatus::Calibrate;
+            }
     }
 
     return PipelineExitStatus::Calibrate;

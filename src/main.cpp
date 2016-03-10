@@ -13,6 +13,7 @@
 #include "calibPipeline.hpp"
 #include "frameProcessor.hpp"
 #include "cvCalibrationFork.hpp"
+#include "calibController.hpp"
 
 using namespace calib;
 
@@ -27,7 +28,7 @@ const char* keys  =
         "{dst      | 295     | Distance between white and black parts of daulCircles template}"
         "{w        |         | Width of template (in corners or circles)}"
         "{h        |         | Height of template (in corners or circles)}"
-        "{of       | params.xml | Output filename}";
+        "{of       | params.xml | Output file name}";
 
 void saveCalibrationParameters(Sptr<calibrationData> data, const std::string& fileName)
 {
@@ -96,14 +97,15 @@ int main(int argc, char** argv)
     capProcessor = Sptr<FrameProcessor>(new CalibProcessor(globalData, capParams.board, capParams.boardSize));
     showProcessor = Sptr<FrameProcessor>(new ShowProcessor(globalData));
 
-    Sptr<CalibPipeline> pipeline(new CalibPipeline(capParams));
+    int calibrationFlags = 0;//cv::CALIB_USE_LU;//CV_CALIB_FIX_K3 | CV_CALIB_ZERO_TANGENT_DIST;
+    Sptr<calibController> controller(new calibController(globalData, calibrationFlags));
+
+    Sptr<CalibPipeline> pipeline(new CalibPipeline(capParams, controller));
     std::vector<Sptr<FrameProcessor>> processors;
     processors.push_back(capProcessor);
     processors.push_back(showProcessor);
 
     std::stack<cameraParameters> paramsStack;
-
-    int calibrationFlags = 0;//cv::CALIB_USE_LU;//CV_CALIB_FIX_K3 | CV_CALIB_ZERO_TANGENT_DIST;
 
     try {
         while(true)
@@ -117,8 +119,9 @@ int main(int argc, char** argv)
                 globalData->cameraMatrix.copyTo(oldCameraMat);
                 globalData->distCoeffs.copyTo(oldDistcoeefs);
                 globalData->stdDeviations.copyTo(oldStdDevs);
-                paramsStack.push(cameraParameters(oldCameraMat, oldDistcoeefs, oldStdDevs));
+                paramsStack.push(cameraParameters(oldCameraMat, oldDistcoeefs, oldStdDevs, globalData->totalAvgErr));
                 globalData->imageSize = pipeline->getImageSize();
+                calibrationFlags = controller->getNewFlags();
 
                 if(capParams.board != TemplateType::chAruco)
                 {
@@ -134,7 +137,7 @@ int main(int argc, char** argv)
                     globalData->totalAvgErr =
                             cvfork::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds, charucoboard, globalData->imageSize,
                                                           globalData->cameraMatrix, globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, calibrationFlags,
-                                                           cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-5));
+                                                           cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7));
                 }
             }
             else if (exitStatus == PipelineExitStatus::DeleteLastFrame)
@@ -152,6 +155,7 @@ int main(int argc, char** argv)
                     globalData->cameraMatrix = (paramsStack.top()).cameraMatrix;
                     globalData->distCoeffs = (paramsStack.top()).distCoeffs;
                     globalData->stdDeviations = (paramsStack.top()).stdDeviations;
+                    globalData->totalAvgErr = (paramsStack.top()).avgError;
                     paramsStack.pop();
                 }
             }

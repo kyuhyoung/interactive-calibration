@@ -36,10 +36,11 @@ namespace calib
         cv::Mat cameraMatrix;
         cv::Mat distCoeffs;
         cv::Mat stdDeviations;
+        double avgError;
 
         cameraParameters(){}
-        cameraParameters(cv::Mat& _cameraMatrix, cv::Mat& _distCoeffs, cv::Mat& _stdDeviations) :
-            cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs), stdDeviations(_stdDeviations)
+        cameraParameters(cv::Mat& _cameraMatrix, cv::Mat& _distCoeffs, cv::Mat& _stdDeviations, double _avgError = 0) :
+            cameraMatrix(_cameraMatrix), distCoeffs(_distCoeffs), stdDeviations(_stdDeviations), avgError(_avgError)
         {}
     };
 
