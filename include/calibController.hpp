@@ -10,9 +10,10 @@ namespace calib {
     protected:
         Sptr<calibrationData> mCalibData;
         int mCalibFlags;
+        bool mNeedTuning;
     public:
         calibController();
-        calibController(Sptr<calibrationData> data, int initialFlags);
+        calibController(Sptr<calibrationData> data, int initialFlags, bool autoTuning);
 
         void updateState();
 

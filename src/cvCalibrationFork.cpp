@@ -4,6 +4,8 @@
 
 using namespace cv;
 
+static void subMatrix(const cv::Mat& src, cv::Mat& dst, const std::vector<uchar>& cols,
+                      const std::vector<uchar>& rows);
 static const char* cvDistCoeffErr = "Distortion coefficients must be 1x4, 4x1, 1x5, 5x1, 1x8, 8x1, 1x12, 12x1, 1x14 or 14x1 floating-point vector";
 
 double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
@@ -277,17 +279,22 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
         if( !proceed ) {
             //do errors estimation
             if(JtJcopy.total() && stdDevs) {
-                Mat JtJinv;
+                Mat mask = cvarrToMat(solver.mask);
+                int nparams_nz = countNonZero(mask);
+                Mat JtJinv, JtJN;
+                JtJN.create(nparams_nz, nparams_nz, CV_64F);
+                subMatrix(JtJcopy, JtJN, solver.mask, solver.mask);
+                completeSymm(JtJN, false);
 #ifndef USE_LAPACK
-                cv::invert(JtJcopy, JtJinv, DECOMP_SVD);
+                cv::invert(JtJN, JtJinv, DECOMP_SVD);
 #else
-                cvfork::invert(JtJcopy, JtJinv, DECOMP_SVD);
+                cvfork::invert(JtJN, JtJinv, DECOMP_SVD);
 #endif
-                double sigma2 = norm(allErrors, NORM_L2SQR) / (total - 6*nimages - NINTRINSIC);
+                double sigma2 = norm(allErrors, NORM_L2SQR) / (total - nparams_nz);
                 Mat stdDevsM = cvarrToMat(stdDevs);
-                uchar* mask = solver.mask->data.ptr;
-                for (int i = 0; i < nparams; i++)
-                    stdDevsM.at<double>(i) = mask[i] ? std::sqrt(JtJinv.at<double>(i,i)*sigma2) : 0;            }
+                for (int i = 0; i < nparams_nz; i++)
+                    stdDevsM.at<double>(i) = std::sqrt(JtJinv.at<double>(i,i)*sigma2);
+            }
             break;
         }
 
@@ -589,7 +596,6 @@ double cvfork::calibrateCameraCharuco(InputArrayOfArrays _charucoCorners, InputA
 }
 
 
-namespace {
 static void subMatrix(const cv::Mat& src, cv::Mat& dst, const std::vector<uchar>& cols,
                       const std::vector<uchar>& rows) {
     int nonzeros_cols = cv::countNonZero(cols);
@@ -612,8 +618,6 @@ static void subMatrix(const cv::Mat& src, cv::Mat& dst, const std::vector<uchar>
             tmp.row(i).copyTo(dst.row(j++));
         }
     }
-}
-
 }
 
 void cvfork::CvLevMarqFork::step()

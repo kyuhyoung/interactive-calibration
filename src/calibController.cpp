@@ -10,15 +10,16 @@ calib::calibController::calibController() :
     mCalibFlags = 0;
 }
 
-calib::calibController::calibController(Sptr<calib::calibrationData> data, int initialFlags) :
+calib::calibController::calibController(Sptr<calib::calibrationData> data, int initialFlags, bool autoTuning) :
     mCalibData(data)
 {
     mCalibFlags = initialFlags;
+    mNeedTuning = autoTuning;
 }
 
 void calib::calibController::updateState()
 {
-    if (getFramesNumberState()) {
+    if (getFramesNumberState() && mNeedTuning) {
         if( !(mCalibFlags & cv::CALIB_FIX_ASPECT_RATIO) &&
             mCalibData->cameraMatrix.total()) {
             double fDiff = fabs(mCalibData->cameraMatrix.at<double>(0,0) -

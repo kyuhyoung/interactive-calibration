@@ -28,7 +28,8 @@ const char* keys  =
         "{dst      | 295     | Distance between white and black parts of daulCircles template}"
         "{w        |         | Width of template (in corners or circles)}"
         "{h        |         | Height of template (in corners or circles)}"
-        "{of       | params.xml | Output file name}";
+        "{of       | CamParams.xml | Output file name}"
+        "{ft       | true    | Auto tuning of calibration flags}";
 
 void saveCalibrationParameters(Sptr<calibrationData> data, const std::string& fileName)
 {
@@ -98,7 +99,7 @@ int main(int argc, char** argv)
     showProcessor = Sptr<FrameProcessor>(new ShowProcessor(globalData));
 
     int calibrationFlags = 0;//cv::CALIB_USE_LU;//CV_CALIB_FIX_K3 | CV_CALIB_ZERO_TANGENT_DIST;
-    Sptr<calibController> controller(new calibController(globalData, calibrationFlags));
+    Sptr<calibController> controller(new calibController(globalData, calibrationFlags, parser.get<bool>("ft")));
 
     Sptr<CalibPipeline> pipeline(new CalibPipeline(capParams, controller));
     std::vector<Sptr<FrameProcessor>> processors;
@@ -112,6 +113,7 @@ int main(int argc, char** argv)
         {
             auto exitStatus = pipeline->start(processors);
             if (exitStatus == PipelineExitStatus::Finished)
+                //maybe save data if controller reports OK
                 break;
             else if (exitStatus == PipelineExitStatus::Calibrate) {
 
