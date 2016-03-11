@@ -13,6 +13,8 @@ namespace calib
 
     static const char* mainWindowName = "Calibration";
 
+    static const double sigmaMult = 1.96;
+
     struct calibrationData
     {
         cv::Mat cameraMatrix;

@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <iostream>
 #include <ctime>
+#include <chrono>
 
 #include "calibCommon.hpp"
 #include "calibPipeline.hpp"
@@ -94,12 +95,13 @@ int main(int argc, char** argv)
     }
 
     Sptr<calibrationData> globalData(new calibrationData);
+
+    int calibrationFlags = 0;
+    Sptr<calibController> controller(new calibController(globalData, calibrationFlags, parser.get<bool>("ft")));
+
     Sptr<FrameProcessor> capProcessor, showProcessor;
     capProcessor = Sptr<FrameProcessor>(new CalibProcessor(globalData, capParams.board, capParams.boardSize));
-    showProcessor = Sptr<FrameProcessor>(new ShowProcessor(globalData));
-
-    int calibrationFlags = 0;//cv::CALIB_USE_LU;//CV_CALIB_FIX_K3 | CV_CALIB_ZERO_TANGENT_DIST;
-    Sptr<calibController> controller(new calibController(globalData, calibrationFlags, parser.get<bool>("ft")));
+    showProcessor = Sptr<FrameProcessor>(new ShowProcessor(globalData, controller));
 
     Sptr<CalibPipeline> pipeline(new CalibPipeline(capParams, controller));
     std::vector<Sptr<FrameProcessor>> processors;
@@ -125,6 +127,8 @@ int main(int argc, char** argv)
                 globalData->imageSize = pipeline->getImageSize();
                 calibrationFlags = controller->getNewFlags();
 
+                using namespace std::chrono;
+                auto startPoint = high_resolution_clock::now();
                 if(capParams.board != TemplateType::chAruco)
                 {
                     globalData->totalAvgErr = cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
@@ -141,6 +145,8 @@ int main(int argc, char** argv)
                                                           globalData->cameraMatrix, globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, calibrationFlags,
                                                            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7));
                 }
+                auto endPoint = high_resolution_clock::now();
+                std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
             }
             else if (exitStatus == PipelineExitStatus::DeleteLastFrame)
             {

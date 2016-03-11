@@ -11,6 +11,7 @@ namespace calib {
         Sptr<calibrationData> mCalibData;
         int mCalibFlags;
         bool mNeedTuning;
+        bool mConfIntervalsState;
     public:
         calibController();
         calibController(Sptr<calibrationData> data, int initialFlags, bool autoTuning);

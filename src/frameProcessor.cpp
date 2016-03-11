@@ -284,10 +284,10 @@ void ShowProcessor::drawGridPoints(const cv::Mat &frame)
                        POINT_SIZE, cv::Scalar(0, 255, 0));
 }
 
-ShowProcessor::ShowProcessor(Sptr<calibrationData> data) :
-    mCalibdata(data)
+ShowProcessor::ShowProcessor(Sptr<calibrationData> data, Sptr<calibController> controller) :
+    mCalibdata(data), mController(controller)
 {
-    mNeedUndistrot = true;
+    mNeedUndistort = true;
 }
 
 cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
@@ -295,10 +295,10 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
     if(mCalibdata->cameraMatrix.size[0] && mCalibdata->distCoeffs.size[0]) {
         cv::Mat frameCopy;
 
-        if (mNeedUndistrot && (mCalibdata->allCharucoIds.size() > 3 || mCalibdata->imagePoints.size() > 3)) {
+        if (mNeedUndistort && mController->getFramesNumberState()) {
             drawGridPoints(frame);
             cv::undistort(frame, frameCopy, mCalibdata->cameraMatrix, mCalibdata->distCoeffs,
-                          cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, cv::Size(frame.rows, frame.cols), 1.0, cv::Size(frame.rows, frame.cols)));
+                          cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, cv::Size(frame.rows, frame.cols), 0, cv::Size(frame.rows, frame.cols)));
             int baseLine = 400;
             cv::Size textSize = cv::getTextSize("Undistorted view", 1, VIDEO_TEXT_SIZE, 2, &baseLine);
             cv::Point textOrigin(frame.cols - 2*textSize.width - 10, frame.rows - 2*baseLine - 10);
@@ -314,6 +314,9 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         else
             displayMessage = cv::format("Fx = %d Fy = %d RMS = %.3f", (int)mCalibdata->cameraMatrix.at<double>(0,0),
                                             (int)mCalibdata->cameraMatrix.at<double>(1,1), mCalibdata->totalAvgErr);
+        if(mController->getRMSState() && mController->getFramesNumberState())
+            displayMessage.append(" OK");
+
         int baseLine = 100;
         cv::Size textSize = cv::getTextSize(displayMessage, 1, VIDEO_TEXT_SIZE - 1, 2, &baseLine);
         cv::Point textOrigin = cv::Point(20, 2*textSize.height);
@@ -324,7 +327,14 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         else
             displayMessage = cv::format("DFx = %.2f DFy = %.2f", mCalibdata->stdDeviations.at<double>(0)*1.96,
                                                     mCalibdata->stdDeviations.at<double>(1)*1.96);
+        if(mController->getConfidenceIntrervalsState() && mController->getFramesNumberState())
+            displayMessage.append(" OK");
         cv::putText(frameCopy, displayMessage, cv::Point(20, 4*textSize.height), 1, VIDEO_TEXT_SIZE - 1, cv::Scalar(0,0,255), 2);
+
+        if(mController->getCommonCalibrationState()) {
+            displayMessage = cv::format("Calibration is done");
+            cv::putText(frameCopy, displayMessage, cv::Point(20, 6*textSize.height), 1, VIDEO_TEXT_SIZE - 1, cv::Scalar(0,0,255), 2);
+        }
 
         return frameCopy;
     }
@@ -344,7 +354,7 @@ void ShowProcessor::resetState()
 
 void ShowProcessor::switchUndistort()
 {
-    mNeedUndistrot = !mNeedUndistrot;
+    mNeedUndistort = !mNeedUndistort;
 }
 
 ShowProcessor::~ShowProcessor()

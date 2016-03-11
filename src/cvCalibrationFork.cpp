@@ -283,7 +283,7 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
                 int nparams_nz = countNonZero(mask);
                 Mat JtJinv, JtJN;
                 JtJN.create(nparams_nz, nparams_nz, CV_64F);
-                subMatrix(JtJcopy, JtJN, solver.mask, solver.mask);
+                subMatrix(JtJcopy, JtJN, mask, mask);
                 completeSymm(JtJN, false);
 #ifndef USE_LAPACK
                 cv::invert(JtJN, JtJinv, DECOMP_SVD);
@@ -292,8 +292,14 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
 #endif
                 double sigma2 = norm(allErrors, NORM_L2SQR) / (total - nparams_nz);
                 Mat stdDevsM = cvarrToMat(stdDevs);
-                for (int i = 0; i < nparams_nz; i++)
-                    stdDevsM.at<double>(i) = std::sqrt(JtJinv.at<double>(i,i)*sigma2);
+                int j = 0;
+                for (int i = 0; i < nparams; i++)
+                    if(mask.data[i]) {
+                        stdDevsM.at<double>(i) = std::sqrt(JtJinv.at<double>(j,j)*sigma2);
+                        j++;
+                    }
+                    else
+                        stdDevsM.at<double>(i) = 0;
             }
             break;
         }

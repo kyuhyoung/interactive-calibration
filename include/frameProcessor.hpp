@@ -5,6 +5,7 @@
 #include <opencv2/aruco/charuco.hpp>
 #include <opencv2/calib3d.hpp>
 #include "calibCommon.hpp"
+#include "calibController.hpp"
 
 namespace calib
 {
@@ -56,11 +57,12 @@ class ShowProcessor : public FrameProcessor
 {
 protected:
     Sptr<calibrationData> mCalibdata;
-    bool mNeedUndistrot;
+    Sptr<calibController> mController;
+    bool mNeedUndistort;
 
     void drawGridPoints(const cv::Mat& frame);
 public:
-    ShowProcessor(Sptr<calibrationData> data);
+    ShowProcessor(Sptr<calibrationData> data, Sptr<calibController> controller);
     virtual cv::Mat processFrame(const cv::Mat& frame) override;
     virtual bool isProcessed() const override;
     virtual void resetState() override;
