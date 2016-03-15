@@ -239,10 +239,13 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
             int baseLine = 400;
             std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibdata->imagePoints.size(),
                                                                                     mCalibdata->allCharucoCorners.size()));
+            cv::displayOverlay(mainWindowName, displayMessage, 1000);
+            /*
             cv::Point textOrigin(frameCopy.cols / 10, frameCopy.rows - 2*baseLine - 10);
             cv::putText(frame, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2);
             cv::imshow(mainWindowName, frame);
             cv::waitKey(300);
+            */
             mCapuredFrames++;
 
             mTemplateLocations.clear();
@@ -355,6 +358,11 @@ void ShowProcessor::resetState()
 void ShowProcessor::switchUndistort()
 {
     mNeedUndistort = !mNeedUndistort;
+}
+
+void ShowProcessor::setUndistort(bool isEnabled)
+{
+    mNeedUndistort = isEnabled;
 }
 
 ShowProcessor::~ShowProcessor()

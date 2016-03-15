@@ -32,32 +32,26 @@ const char* keys  =
         "{of       | CamParams.xml | Output file name}"
         "{ft       | true    | Auto tuning of calibration flags}";
 
-void saveCalibrationParameters(Sptr<calibrationData> data, const std::string& fileName)
-{
-    cv::FileStorage parametersWriter(fileName, cv::FileStorage::WRITE);
-    time_t rawtime;
-    time(&rawtime);
-    parametersWriter << "calibrationDate" << asctime(localtime(&rawtime));
-    parametersWriter << "framesCount" << std::max((int)data->objectPoints.size(), (int)data->allCharucoCorners.size());
-    parametersWriter << "cameraMatrix" << data->cameraMatrix;
-    parametersWriter << "cameraMatrix_std_dev" << data->stdDeviations.rowRange(cv::Range(0, 4));
-    parametersWriter << "dist_coeffs" << data->distCoeffs;
-    parametersWriter << "dist_coeffs_std_dev" << data->stdDeviations.rowRange(cv::Range(4, 9));
-    parametersWriter << "avg_reprojection_error" << data->totalAvgErr;
-
-    parametersWriter.release();
-}
-
 void deleteButton(int state, void* data)
 {
-    Sptr<calibDataController> controller = *((Sptr<calibDataController>*)data);
-    controller->deleteLastFrame();
+    (static_cast<Sptr<calibDataController>*>(data))->get()->deleteLastFrame();
 }
 
 void deleteAllButton(int state, void* data)
 {
-    Sptr<calibDataController> controller = *((Sptr<calibDataController>*)data);
-    controller->deleteAllData();
+    (static_cast<Sptr<calibDataController>*>(data))->get()->deleteAllData();
+}
+
+void undistortButton(int state, void* data)
+{
+    ShowProcessor* processor = static_cast<ShowProcessor*>(((Sptr<FrameProcessor>*)data)->get());
+    processor->setUndistort(static_cast<bool>(state));
+}
+
+void saveCurrentParamsButton(int state, void* data)
+{
+    (static_cast<Sptr<calibDataController>*>(data))->get()->saveCurrentCameraParameters();
+    cv::displayOverlay(mainWindowName, "Calibration parameters saved", OVERLAY_DELAY);
 }
 
 int main(int argc, char** argv)
@@ -111,6 +105,7 @@ int main(int argc, char** argv)
     int calibrationFlags = 0;
     Sptr<calibController> controller(new calibController(globalData, calibrationFlags, parser.get<bool>("ft")));
     Sptr<calibDataController> dataController(new calibDataController(globalData));
+    dataController->setParametersFileName(parser.get<std::string>("of"));
 
     Sptr<FrameProcessor> capProcessor, showProcessor;
     capProcessor = Sptr<FrameProcessor>(new CalibProcessor(globalData, capParams.board, capParams.boardSize));
@@ -123,8 +118,10 @@ int main(int argc, char** argv)
 
     cv::namedWindow(mainWindowName);
     cv::moveWindow(mainWindowName, 0, 0);
-    cv::createButton("Delete last frame", deleteButton, &dataController, cv::QT_PUSH_BUTTON, false);
-    cv::createButton("Delete all frames", deleteAllButton, &dataController, cv::QT_PUSH_BUTTON, false);
+    cv::createButton("Delete last frame", deleteButton, &dataController, CV_PUSH_BUTTON, false);
+    cv::createButton("Delete all frames", deleteAllButton, &dataController, CV_PUSH_BUTTON, false);
+    cv::createButton("Undistort", undistortButton, &showProcessor, CV_CHECKBOX, false);
+    cv::createButton("Save current parameters", saveCurrentParamsButton, &dataController, CV_PUSH_BUTTON, false);
 
     try {
         while(true)
@@ -133,7 +130,7 @@ int main(int argc, char** argv)
             if (exitStatus == PipelineExitStatus::Finished) {
                 //std::cout << "Calibration finished\n";
                 if(controller->getCommonCalibrationState())
-                    saveCalibrationParameters(globalData, parser.get<std::string>("of"));
+                    dataController->saveCurrentCameraParameters();
                 break;
             }
             else if (exitStatus == PipelineExitStatus::Calibrate) {
@@ -167,8 +164,10 @@ int main(int argc, char** argv)
                 dataController->deleteLastFrame();
             else if (exitStatus == PipelineExitStatus::DeleteAllFrames)
                 dataController->deleteAllData();
-            else if (exitStatus == PipelineExitStatus::SaveCurrentData)
-                saveCalibrationParameters(globalData, parser.get<std::string>("of"));
+            else if (exitStatus == PipelineExitStatus::SaveCurrentData) {
+                dataController->saveCurrentCameraParameters();
+                cv::displayOverlay(mainWindowName, "Calibration parameters saved", OVERLAY_DELAY);
+            }
             else if (exitStatus == PipelineExitStatus::SwitchUndistort)
                 static_cast<ShowProcessor*>(showProcessor.get())->switchUndistort();
 

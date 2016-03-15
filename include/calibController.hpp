@@ -3,6 +3,7 @@
 
 #include "calibCommon.hpp"
 #include <stack>
+#include <string>
 
 namespace calib {
 
@@ -32,12 +33,16 @@ namespace calib {
     protected:
         Sptr<calibrationData> mCalibData;
         std::stack<cameraParameters> mParamsStack;
+        std::string mParamsFileName;
     public:
         calibDataController(Sptr<calibrationData> data);
         calibDataController();
+
+        void setParametersFileName(const std::string& name);
         void deleteLastFrame();
         void rememberCurrentParameters();
         void deleteAllData();
+        void saveCurrentCameraParameters();
     };
 
 }

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 #include <opencv2/calib3d.hpp>
 //#include <cstdio>
 
@@ -108,7 +109,7 @@ int calib::calibController::getNewFlags() const
 }
 
 calib::calibDataController::calibDataController(Sptr<calib::calibrationData> data) :
-    mCalibData(data)
+    mCalibData(data), mParamsFileName("CamParams.xml")
 
 {
 
@@ -117,6 +118,11 @@ calib::calibDataController::calibDataController(Sptr<calib::calibrationData> dat
 calib::calibDataController::calibDataController()
 {
 
+}
+
+void calib::calibDataController::setParametersFileName(const std::string &name)
+{
+    mParamsFileName = name;
 }
 
 void calib::calibDataController::deleteLastFrame()
@@ -158,4 +164,20 @@ void calib::calibDataController::deleteAllData()
     mCalibData->cameraMatrix = mCalibData->distCoeffs = cv::Mat();
     mParamsStack = std::stack<cameraParameters>();
     rememberCurrentParameters();
+}
+
+void calib::calibDataController::saveCurrentCameraParameters()
+{
+    cv::FileStorage parametersWriter(mParamsFileName, cv::FileStorage::WRITE);
+    time_t rawtime;
+    time(&rawtime);
+    parametersWriter << "calibrationDate" << asctime(localtime(&rawtime));
+    parametersWriter << "framesCount" << std::max((int)mCalibData->objectPoints.size(), (int)mCalibData->allCharucoCorners.size());
+    parametersWriter << "cameraMatrix" << mCalibData->cameraMatrix;
+    parametersWriter << "cameraMatrix_std_dev" << mCalibData->stdDeviations.rowRange(cv::Range(0, 4));
+    parametersWriter << "dist_coeffs" << mCalibData->distCoeffs;
+    parametersWriter << "dist_coeffs_std_dev" << mCalibData->stdDeviations.rowRange(cv::Range(4, 9));
+    parametersWriter << "avg_reprojection_error" << mCalibData->totalAvgErr;
+
+    parametersWriter.release();
 }

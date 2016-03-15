@@ -7,6 +7,8 @@
 
 namespace calib
 {
+    #define OVERLAY_DELAY 1000
+
     enum class InputType { Video, Pictures };
     enum class InputVideoSource { Camera, File };
     enum class TemplateType { AcirclesGrid, Chessboard, chAruco, DoubleAcirclesGrid };

@@ -67,6 +67,7 @@ public:
     virtual bool isProcessed() const override;
     virtual void resetState() override;
     void switchUndistort();
+    void setUndistort(bool isEnabled);
     ~ShowProcessor();
 };
 
