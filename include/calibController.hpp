@@ -2,6 +2,7 @@
 #define CALIB_CONTROLLER_HPP
 
 #include "calibCommon.hpp"
+#include <stack>
 
 namespace calib {
 
@@ -24,6 +25,19 @@ namespace calib {
         bool getConfidenceIntrervalsState() const;
         bool getRMSState() const;
         int getNewFlags() const;
+    };
+
+    class calibDataController
+    {
+    protected:
+        Sptr<calibrationData> mCalibData;
+        std::stack<cameraParameters> mParamsStack;
+    public:
+        calibDataController(Sptr<calibrationData> data);
+        calibDataController();
+        void deleteLastFrame();
+        void rememberCurrentParameters();
+        void deleteAllData();
     };
 
 }

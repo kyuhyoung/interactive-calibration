@@ -106,3 +106,56 @@ int calib::calibController::getNewFlags() const
 {
     return mCalibFlags;
 }
+
+calib::calibDataController::calibDataController(Sptr<calib::calibrationData> data) :
+    mCalibData(data)
+
+{
+
+}
+
+calib::calibDataController::calibDataController()
+{
+
+}
+
+void calib::calibDataController::deleteLastFrame()
+{
+    if( !mCalibData->imagePoints.empty()) {
+        mCalibData->imagePoints.pop_back();
+        mCalibData->objectPoints.pop_back();
+    }
+
+    if (!mCalibData->allCharucoCorners.empty()) {
+        mCalibData->allCharucoCorners.pop_back();
+        mCalibData->allCharucoIds.pop_back();
+    }
+
+    if(!mParamsStack.empty()) {
+        mCalibData->cameraMatrix = (mParamsStack.top()).cameraMatrix;
+        mCalibData->distCoeffs = (mParamsStack.top()).distCoeffs;
+        mCalibData->stdDeviations = (mParamsStack.top()).stdDeviations;
+        mCalibData->totalAvgErr = (mParamsStack.top()).avgError;
+        mParamsStack.pop();
+    }
+}
+
+void calib::calibDataController::rememberCurrentParameters()
+{
+    cv::Mat oldCameraMat, oldDistcoeefs, oldStdDevs;
+    mCalibData->cameraMatrix.copyTo(oldCameraMat);
+    mCalibData->distCoeffs.copyTo(oldDistcoeefs);
+    mCalibData->stdDeviations.copyTo(oldStdDevs);
+    mParamsStack.push(cameraParameters(oldCameraMat, oldDistcoeefs, oldStdDevs, mCalibData->totalAvgErr));
+}
+
+void calib::calibDataController::deleteAllData()
+{
+    mCalibData->imagePoints.clear();
+    mCalibData->objectPoints.clear();
+    mCalibData->allCharucoCorners.clear();
+    mCalibData->allCharucoIds.clear();
+    mCalibData->cameraMatrix = mCalibData->distCoeffs = cv::Mat();
+    mParamsStack = std::stack<cameraParameters>();
+    rememberCurrentParameters();
+}

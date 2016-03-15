@@ -48,6 +48,18 @@ void saveCalibrationParameters(Sptr<calibrationData> data, const std::string& fi
     parametersWriter.release();
 }
 
+void deleteButton(int state, void* data)
+{
+    Sptr<calibDataController> controller = *((Sptr<calibDataController>*)data);
+    controller->deleteLastFrame();
+}
+
+void deleteAllButton(int state, void* data)
+{
+    Sptr<calibDataController> controller = *((Sptr<calibDataController>*)data);
+    controller->deleteAllData();
+}
+
 int main(int argc, char** argv)
 {
     cv::CommandLineParser parser(argc, argv, keys);
@@ -98,6 +110,7 @@ int main(int argc, char** argv)
 
     int calibrationFlags = 0;
     Sptr<calibController> controller(new calibController(globalData, calibrationFlags, parser.get<bool>("ft")));
+    Sptr<calibDataController> dataController(new calibDataController(globalData));
 
     Sptr<FrameProcessor> capProcessor, showProcessor;
     capProcessor = Sptr<FrameProcessor>(new CalibProcessor(globalData, capParams.board, capParams.boardSize));
@@ -108,22 +121,24 @@ int main(int argc, char** argv)
     processors.push_back(capProcessor);
     processors.push_back(showProcessor);
 
-    std::stack<cameraParameters> paramsStack;
+    cv::namedWindow(mainWindowName);
+    cv::moveWindow(mainWindowName, 0, 0);
+    cv::createButton("Delete last frame", deleteButton, &dataController, cv::QT_PUSH_BUTTON, false);
+    cv::createButton("Delete all frames", deleteAllButton, &dataController, cv::QT_PUSH_BUTTON, false);
 
     try {
         while(true)
         {
             auto exitStatus = pipeline->start(processors);
-            if (exitStatus == PipelineExitStatus::Finished)
-                //maybe save data if controller reports OK
+            if (exitStatus == PipelineExitStatus::Finished) {
+                //std::cout << "Calibration finished\n";
+                if(controller->getCommonCalibrationState())
+                    saveCalibrationParameters(globalData, parser.get<std::string>("of"));
                 break;
+            }
             else if (exitStatus == PipelineExitStatus::Calibrate) {
 
-                cv::Mat oldCameraMat, oldDistcoeefs, oldStdDevs;
-                globalData->cameraMatrix.copyTo(oldCameraMat);
-                globalData->distCoeffs.copyTo(oldDistcoeefs);
-                globalData->stdDeviations.copyTo(oldStdDevs);
-                paramsStack.push(cameraParameters(oldCameraMat, oldDistcoeefs, oldStdDevs, globalData->totalAvgErr));
+                dataController->rememberCurrentParameters();
                 globalData->imageSize = pipeline->getImageSize();
                 calibrationFlags = controller->getNewFlags();
 
@@ -146,34 +161,12 @@ int main(int argc, char** argv)
                                                            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7));
                 }
                 auto endPoint = high_resolution_clock::now();
-                std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
+                //std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
             }
             else if (exitStatus == PipelineExitStatus::DeleteLastFrame)
-            {
-                if( !globalData->imagePoints.empty()) {
-                    globalData->imagePoints.pop_back();
-                    globalData->objectPoints.pop_back();
-                }
-
-                if (!globalData->allCharucoCorners.empty()) {
-                    globalData->allCharucoCorners.pop_back();
-                    globalData->allCharucoIds.pop_back();
-                }
-                if(!paramsStack.empty()) {
-                    globalData->cameraMatrix = (paramsStack.top()).cameraMatrix;
-                    globalData->distCoeffs = (paramsStack.top()).distCoeffs;
-                    globalData->stdDeviations = (paramsStack.top()).stdDeviations;
-                    globalData->totalAvgErr = (paramsStack.top()).avgError;
-                    paramsStack.pop();
-                }
-            }
-            else if (exitStatus == PipelineExitStatus::DeleteAllFrames) {
-                globalData->imagePoints.clear();
-                globalData->objectPoints.clear();
-                globalData->allCharucoCorners.clear();
-                globalData->allCharucoIds.clear();
-                globalData->cameraMatrix = globalData->distCoeffs = cv::Mat();
-            }
+                dataController->deleteLastFrame();
+            else if (exitStatus == PipelineExitStatus::DeleteAllFrames)
+                dataController->deleteAllData();
             else if (exitStatus == PipelineExitStatus::SaveCurrentData)
                 saveCalibrationParameters(globalData, parser.get<std::string>("of"));
             else if (exitStatus == PipelineExitStatus::SwitchUndistort)

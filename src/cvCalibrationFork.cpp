@@ -731,7 +731,7 @@ bool cvfork::CvLevMarqFork::updateAlt( const CvMat*& _param, CvMat*& _JtJ, CvMat
     if( ++iters >= criteria.max_iter ||
         cvNorm(param, prevParam, CV_RELATIVE_L2) < criteria.epsilon )
     {
-        printf("iters %i\n", iters);
+        //printf("iters %i\n", iters);
         _param = param;
         state = DONE;
         return false;
