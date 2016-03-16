@@ -108,9 +108,11 @@ int calib::calibController::getNewFlags() const
     return mCalibFlags;
 }
 
+
+//////////////////// calibDataController
+
 calib::calibDataController::calibDataController(Sptr<calib::calibrationData> data) :
     mCalibData(data), mParamsFileName("CamParams.xml")
-
 {
 
 }
@@ -166,18 +168,28 @@ void calib::calibDataController::deleteAllData()
     rememberCurrentParameters();
 }
 
-void calib::calibDataController::saveCurrentCameraParameters()
+bool calib::calibDataController::saveCurrentCameraParameters() const
 {
-    cv::FileStorage parametersWriter(mParamsFileName, cv::FileStorage::WRITE);
-    time_t rawtime;
-    time(&rawtime);
-    parametersWriter << "calibrationDate" << asctime(localtime(&rawtime));
-    parametersWriter << "framesCount" << std::max((int)mCalibData->objectPoints.size(), (int)mCalibData->allCharucoCorners.size());
-    parametersWriter << "cameraMatrix" << mCalibData->cameraMatrix;
-    parametersWriter << "cameraMatrix_std_dev" << mCalibData->stdDeviations.rowRange(cv::Range(0, 4));
-    parametersWriter << "dist_coeffs" << mCalibData->distCoeffs;
-    parametersWriter << "dist_coeffs_std_dev" << mCalibData->stdDeviations.rowRange(cv::Range(4, 9));
-    parametersWriter << "avg_reprojection_error" << mCalibData->totalAvgErr;
+    bool success = false;
+    if(mCalibData->cameraMatrix.total()) {
+            cv::FileStorage parametersWriter(mParamsFileName, cv::FileStorage::WRITE);
+            if(parametersWriter.isOpened()) {
+            time_t rawtime;
+            time(&rawtime);
+            char buf[256];
+            strftime( buf, sizeof(buf)-1, "%c", localtime(&rawtime));
 
-    parametersWriter.release();
+            parametersWriter << "calibrationDate" << buf;
+            parametersWriter << "framesCount" << std::max((int)mCalibData->objectPoints.size(), (int)mCalibData->allCharucoCorners.size());
+            parametersWriter << "cameraMatrix" << mCalibData->cameraMatrix;
+            parametersWriter << "cameraMatrix_std_dev" << mCalibData->stdDeviations.rowRange(cv::Range(0, 4));
+            parametersWriter << "dist_coeffs" << mCalibData->distCoeffs;
+            parametersWriter << "dist_coeffs_std_dev" << mCalibData->stdDeviations.rowRange(cv::Range(4, 9));
+            parametersWriter << "avg_reprojection_error" << mCalibData->totalAvgErr;
+
+            parametersWriter.release();
+            success = true;
+        }
+    }
+    return success;
 }

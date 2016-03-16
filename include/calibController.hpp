@@ -42,7 +42,7 @@ namespace calib {
         void deleteLastFrame();
         void rememberCurrentParameters();
         void deleteAllData();
-        void saveCurrentCameraParameters();
+        bool saveCurrentCameraParameters() const;
     };
 
 }

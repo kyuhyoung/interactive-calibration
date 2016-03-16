@@ -2,6 +2,7 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/aruco/charuco.hpp>
+#include <opencv2/cvconfig.h>
 #include <opencv2/highgui.hpp>
 #include <vector>
 #include <string>
@@ -236,16 +237,17 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
         if(cv::norm(mTemplateLocations[0] - mTemplateLocations[delayBetweenCaptures - 1]) < mMaxTemplateOffset)
         {
             saveFrameData();
-            int baseLine = 400;
             std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibdata->imagePoints.size(),
                                                                                     mCalibdata->allCharucoCorners.size()));
-            cv::displayOverlay(mainWindowName, displayMessage, 1000);
-            /*
+#ifdef HAVE_QT
+            cv::displayOverlay(mainWindowName, displayMessage, OVERLAY_DELAY);
+#else
+            int baseLine = 400;
             cv::Point textOrigin(frameCopy.cols / 10, frameCopy.rows - 2*baseLine - 10);
             cv::putText(frame, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2);
             cv::imshow(mainWindowName, frame);
             cv::waitKey(300);
-            */
+#endif
             mCapuredFrames++;
 
             mTemplateLocations.clear();
@@ -295,17 +297,19 @@ ShowProcessor::ShowProcessor(Sptr<calibrationData> data, Sptr<calibController> c
 
 cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
 {
+    auto textColor = cv::Scalar(0,0,255);
     if(mCalibdata->cameraMatrix.size[0] && mCalibdata->distCoeffs.size[0]) {
         cv::Mat frameCopy;
 
         if (mNeedUndistort && mController->getFramesNumberState()) {
             drawGridPoints(frame);
             cv::undistort(frame, frameCopy, mCalibdata->cameraMatrix, mCalibdata->distCoeffs,
-                          cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, cv::Size(frame.rows, frame.cols), 0, cv::Size(frame.rows, frame.cols)));
+                          cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs,
+                                                        cv::Size(frame.rows, frame.cols), 0.0, cv::Size(frame.rows, frame.cols)));
             int baseLine = 400;
             cv::Size textSize = cv::getTextSize("Undistorted view", 1, VIDEO_TEXT_SIZE, 2, &baseLine);
-            cv::Point textOrigin(frame.cols - 2*textSize.width - 10, frame.rows - 2*baseLine - 10);
-            cv::putText(frameCopy, "Undistorted view", textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2);
+            cv::Point textOrigin(20, frame.rows - (int)(2.5*textSize.height));
+            cv::putText(frameCopy, "Undistorted view", textOrigin, 1, VIDEO_TEXT_SIZE, textColor, 2);
         }
         else {
             frame.copyTo(frameCopy);
@@ -323,7 +327,7 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         int baseLine = 100;
         cv::Size textSize = cv::getTextSize(displayMessage, 1, VIDEO_TEXT_SIZE - 1, 2, &baseLine);
         cv::Point textOrigin = cv::Point(20, 2*textSize.height);
-        cv::putText(frameCopy, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE - 1, cv::Scalar(0,0,255), 2);
+        cv::putText(frameCopy, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE - 1, textColor, 2);
 
         if(mCalibdata->stdDeviations.at<double>(0) == 0)
             displayMessage = cv::format("DF = %.2f", mCalibdata->stdDeviations.at<double>(1)*1.96);
@@ -332,13 +336,30 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
                                                     mCalibdata->stdDeviations.at<double>(1)*1.96);
         if(mController->getConfidenceIntrervalsState() && mController->getFramesNumberState())
             displayMessage.append(" OK");
-        cv::putText(frameCopy, displayMessage, cv::Point(20, 4*textSize.height), 1, VIDEO_TEXT_SIZE - 1, cv::Scalar(0,0,255), 2);
+        cv::putText(frameCopy, displayMessage, cv::Point(20, 4*textSize.height), 1, VIDEO_TEXT_SIZE - 1, textColor, 2);
 
         if(mController->getCommonCalibrationState()) {
             displayMessage = cv::format("Calibration is done");
-            cv::putText(frameCopy, displayMessage, cv::Point(20, 6*textSize.height), 1, VIDEO_TEXT_SIZE - 1, cv::Scalar(0,0,255), 2);
+            cv::putText(frameCopy, displayMessage, cv::Point(20, 6*textSize.height), 1, VIDEO_TEXT_SIZE - 1, textColor, 2);
         }
-
+        int calibFlags = mController->getNewFlags();
+        displayMessage = "";
+        if(calibFlags & cv::CALIB_FIX_ASPECT_RATIO)
+            displayMessage.append("AR=1.0 ");
+        if(calibFlags & cv::CALIB_ZERO_TANGENT_DIST)
+            displayMessage.append("TD=0 ");
+        displayMessage.append(cv::format("K1=%.2f K2=%.2f K3=%.2f", mCalibdata->distCoeffs.at<double>(0), mCalibdata->distCoeffs.at<double>(1),
+                                         mCalibdata->distCoeffs.at<double>(4)));
+        /*
+        if((calibFlags & cv::CALIB_FIX_K1))
+            displayMessage.append("K1=0 ");
+        if(calibFlags & cv::CALIB_FIX_K2)
+            displayMessage.append("K2=0 ");
+        if(calibFlags & cv::CALIB_FIX_K3)
+            displayMessage.append("K3=0 ");
+            */
+        cv::putText(frameCopy, displayMessage, cv::Point(20, frameCopy.rows - (int)(1.5*textSize.height)),
+                    1, VIDEO_TEXT_SIZE - 1, textColor, 2);
         return frameCopy;
     }
 

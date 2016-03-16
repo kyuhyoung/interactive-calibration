@@ -1,13 +1,13 @@
 #include <opencv2/core.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/aruco/charuco.hpp>
+#include <opencv2/cvconfig.h>
+#include <opencv2/highgui.hpp>
 #include <string>
 #include <vector>
-#include <stack>
 #include <exception>
 #include <algorithm>
 #include <iostream>
-#include <ctime>
 #include <chrono>
 
 #include "calibCommon.hpp"
@@ -32,26 +32,40 @@ const char* keys  =
         "{of       | CamParams.xml | Output file name}"
         "{ft       | true    | Auto tuning of calibration flags}";
 
+bool showOverlayMessage(const std::string& message)
+{
+#ifdef HAVE_QT
+    cv::displayOverlay(mainWindowName, message, OVERLAY_DELAY);
+    return true;
+#else
+    return false;
+#endif
+}
+
 void deleteButton(int state, void* data)
 {
     (static_cast<Sptr<calibDataController>*>(data))->get()->deleteLastFrame();
+    showOverlayMessage("Last frame deleted");
 }
 
 void deleteAllButton(int state, void* data)
 {
     (static_cast<Sptr<calibDataController>*>(data))->get()->deleteAllData();
+    showOverlayMessage("All frames deleted");
 }
 
 void undistortButton(int state, void* data)
 {
     ShowProcessor* processor = static_cast<ShowProcessor*>(((Sptr<FrameProcessor>*)data)->get());
     processor->setUndistort(static_cast<bool>(state));
+    showOverlayMessage(std::string("Undistort is ") +
+                       (static_cast<bool>(state) ? std::string("on") : std::string("off")));
 }
 
 void saveCurrentParamsButton(int state, void* data)
 {
-    (static_cast<Sptr<calibDataController>*>(data))->get()->saveCurrentCameraParameters();
-    cv::displayOverlay(mainWindowName, "Calibration parameters saved", OVERLAY_DELAY);
+    if((static_cast<Sptr<calibDataController>*>(data))->get()->saveCurrentCameraParameters())
+        showOverlayMessage("Calibration parameters saved");
 }
 
 int main(int argc, char** argv)
@@ -118,11 +132,12 @@ int main(int argc, char** argv)
 
     cv::namedWindow(mainWindowName);
     cv::moveWindow(mainWindowName, 0, 0);
-    cv::createButton("Delete last frame", deleteButton, &dataController, CV_PUSH_BUTTON, false);
-    cv::createButton("Delete all frames", deleteAllButton, &dataController, CV_PUSH_BUTTON, false);
+#ifdef HAVE_QT
+    cv::createButton("Delete last frame", deleteButton, &dataController, CV_PUSH_BUTTON);
+    cv::createButton("Delete all frames", deleteAllButton, &dataController, CV_PUSH_BUTTON);
     cv::createButton("Undistort", undistortButton, &showProcessor, CV_CHECKBOX, false);
-    cv::createButton("Save current parameters", saveCurrentParamsButton, &dataController, CV_PUSH_BUTTON, false);
-
+    cv::createButton("Save current parameters", saveCurrentParamsButton, &dataController, CV_PUSH_BUTTON);
+#endif
     try {
         while(true)
         {
@@ -130,7 +145,7 @@ int main(int argc, char** argv)
             if (exitStatus == PipelineExitStatus::Finished) {
                 //std::cout << "Calibration finished\n";
                 if(controller->getCommonCalibrationState())
-                    dataController->saveCurrentCameraParameters();
+                    saveCurrentParamsButton(0, &dataController);
                 break;
             }
             else if (exitStatus == PipelineExitStatus::Calibrate) {
@@ -161,12 +176,11 @@ int main(int argc, char** argv)
                 //std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
             }
             else if (exitStatus == PipelineExitStatus::DeleteLastFrame)
-                dataController->deleteLastFrame();
+                deleteButton(0, &dataController);
             else if (exitStatus == PipelineExitStatus::DeleteAllFrames)
-                dataController->deleteAllData();
+                deleteAllButton(0, &dataController);
             else if (exitStatus == PipelineExitStatus::SaveCurrentData) {
-                dataController->saveCurrentCameraParameters();
-                cv::displayOverlay(mainWindowName, "Calibration parameters saved", OVERLAY_DELAY);
+                saveCurrentParamsButton(0, &dataController);
             }
             else if (exitStatus == PipelineExitStatus::SwitchUndistort)
                 static_cast<ShowProcessor*>(showProcessor.get())->switchUndistort();
