@@ -33,7 +33,7 @@ const char* keys  =
         "{ft       | true    | Auto tuning of calibration flags}"
         "{help     |         | Print help}";
 
-bool showOverlayMessage(const std::string& message)
+bool calib::showOverlayMessage(const std::string& message)
 {
 #ifdef HAVE_QT
     cv::displayOverlay(mainWindowName, message, OVERLAY_DELAY);
@@ -46,27 +46,27 @@ bool showOverlayMessage(const std::string& message)
 void deleteButton(int state, void* data)
 {
     (static_cast<Sptr<calibDataController>*>(data))->get()->deleteLastFrame();
-    showOverlayMessage("Last frame deleted");
+    calib::showOverlayMessage("Last frame deleted");
 }
 
 void deleteAllButton(int state, void* data)
 {
     (static_cast<Sptr<calibDataController>*>(data))->get()->deleteAllData();
-    showOverlayMessage("All frames deleted");
+    calib::showOverlayMessage("All frames deleted");
 }
 
 void undistortButton(int state, void* data)
 {
     ShowProcessor* processor = static_cast<ShowProcessor*>(((Sptr<FrameProcessor>*)data)->get());
     processor->setUndistort(static_cast<bool>(state));
-    showOverlayMessage(std::string("Undistort is ") +
+    calib::showOverlayMessage(std::string("Undistort is ") +
                        (static_cast<bool>(state) ? std::string("on") : std::string("off")));
 }
 
 void saveCurrentParamsButton(int state, void* data)
 {
     if((static_cast<Sptr<calibDataController>*>(data))->get()->saveCurrentCameraParameters())
-        showOverlayMessage("Calibration parameters saved");
+        calib::showOverlayMessage("Calibration parameters saved");
 }
 
 int main(int argc, char** argv)
@@ -136,6 +136,8 @@ int main(int argc, char** argv)
     processors.push_back(capProcessor);
     processors.push_back(showProcessor);
 
+    cv::namedWindow(gridWindowName);
+    //cv::moveWindow(gridWindowName, );
     cv::namedWindow(mainWindowName);
     cv::moveWindow(mainWindowName, 10, 10);
 #ifdef HAVE_QT

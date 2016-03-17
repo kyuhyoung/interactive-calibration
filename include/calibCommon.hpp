@@ -39,6 +39,8 @@ namespace calib
 
         std::vector<cv::Mat> allCharucoCorners;
         std::vector<cv::Mat> allCharucoIds;
+
+        cv::Mat undistMap1, undistMap2;
     };
 
     struct cameraParameters

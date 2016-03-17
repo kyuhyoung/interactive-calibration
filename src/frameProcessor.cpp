@@ -245,6 +245,11 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
                 cv::imshow(mainWindowName, frame);
                 cv::waitKey(300);
             }
+            if(mCalibdata->cameraMatrix.total())
+                cv::initUndistortRectifyMap(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, cv::Mat(),
+                                        cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs,
+                                                                      frame.size(), 0.0, frame.size()), frame.size(), CV_16SC2, mCalibdata->undistMap1, mCalibdata->undistMap2);
+
             mCapuredFrames++;
 
             mTemplateLocations.clear();
@@ -300,9 +305,7 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
 
         if (mNeedUndistort && mController->getFramesNumberState()) {
             drawGridPoints(frame);
-            cv::undistort(frame, frameCopy, mCalibdata->cameraMatrix, mCalibdata->distCoeffs,
-                          cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs,
-                                                        cv::Size(frame.rows, frame.cols), 0.0, cv::Size(frame.rows, frame.cols)));
+            cv::remap(frame, frameCopy, mCalibdata->undistMap1, mCalibdata->undistMap2, cv::INTER_LINEAR);
             int baseLine = 400;
             cv::Size textSize = cv::getTextSize("Undistorted view", 1, VIDEO_TEXT_SIZE, 2, &baseLine);
             cv::Point textOrigin(20, frame.rows - (int)(2.5*textSize.height));
