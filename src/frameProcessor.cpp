@@ -5,6 +5,7 @@
 #include <opencv2/highgui.hpp>
 #include <vector>
 #include <string>
+#include <iostream>
 
 using namespace calib;
 
@@ -246,9 +247,9 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
                 cv::waitKey(300);
             }
             if(mCalibdata->cameraMatrix.total())
-                cv::initUndistortRectifyMap(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, cv::Mat(),
-                                        cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs,
-                                                                      frame.size(), 0.0, frame.size()), frame.size(), CV_16SC2, mCalibdata->undistMap1, mCalibdata->undistMap2);
+                cv::initUndistortRectifyMap(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, cv::noArray(),
+                                        cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, frame.size(), 0.0, frame.size()),
+                                        frame.size(), CV_16SC2, mCalibdata->undistMap1, mCalibdata->undistMap2);
 
             mCapuredFrames++;
 
@@ -283,12 +284,46 @@ void ShowProcessor::drawGridPoints(const cv::Mat &frame)
 {
     for(auto it = mCalibdata->imagePoints.begin(); it != mCalibdata->imagePoints.end(); ++it)
         for(auto pointIt = (*it).begin(); pointIt != (*it).end(); ++pointIt)
-            cv::circle(frame, *pointIt, POINT_SIZE, cv::Scalar(0, 255, 0));
+            cv::circle(frame, *pointIt, POINT_SIZE, cv::Scalar(0, 255, 0), 1, CV_AA);
 
     for(auto it = mCalibdata->allCharucoCorners.begin(); it != mCalibdata->allCharucoCorners.end(); ++it)
         for(int i = 0; i < (*it).size[0]; i++)
             cv::circle(frame, cv::Point((int)(*it).at<float>(i, 0), (int)(*it).at<float>(i, 1)),
-                       POINT_SIZE, cv::Scalar(0, 255, 0));
+                       POINT_SIZE, cv::Scalar(0, 255, 0), 1, CV_AA);
+
+    /*
+    double gridViewScale = 0.5;
+    cv::Mat altGridView = cv::Mat::zeros((int)(frame.rows*gridViewScale), (int)(frame.cols*gridViewScale), CV_64FC3);
+    for(auto it = mCalibdata->imagePoints.begin(); it != mCalibdata->imagePoints.end(); ++it)
+    {
+        std::vector<cv::Point2f> templateHull;
+        std::vector<cv::Point> poly;
+        cv::convexHull(*it, templateHull);
+        for(size_t i=0; i<templateHull.size();i++)
+            poly.push_back(cv::Point((int)(templateHull[i].x*gridViewScale), (int)(templateHull[i].y*gridViewScale)));
+        std::vector<std::vector<cv::Point>> hullsArr;
+        hullsArr.push_back(poly);
+        cv::fillPoly(altGridView, hullsArr, cv::Scalar(0, 255, 0));
+        //for(auto pointIt = (*it).begin(); pointIt != (*it).end(); ++pointIt)
+            //cv::circle(altGridView, *pointIt/2, POINT_SIZE, cv::Scalar(0, 255, 0));
+    }
+
+    for(auto it = mCalibdata->allCharucoCorners.begin(); it != mCalibdata->allCharucoCorners.end(); ++it)
+        for(int i = 0; i < (*it).size[0]; i++)
+        {
+            std::vector<cv::Point2f> templateHull;
+            std::vector<cv::Point> poly;
+            cv::convexHull(*it, templateHull);
+            for(size_t i=0; i<templateHull.size();i++)
+                poly.push_back(cv::Point((int)(templateHull[i].x*gridViewScale), (int)(templateHull[i].y*gridViewScale)));
+            std::vector<std::vector<cv::Point>> hullsArr;
+            hullsArr.push_back(poly);
+            cv::fillPoly(altGridView, hullsArr, cv::Scalar(0, 255, 0));
+            //cv::circle(altGridView, cv::Point((int)(*it).at<float>(i, 0)/2, (int)(*it).at<float>(i, 1)/2),
+                       //POINT_SIZE, cv::Scalar(0, 255, 0));
+        }
+    cv::imshow(gridWindowName, altGridView);
+    */
 }
 
 ShowProcessor::ShowProcessor(Sptr<calibrationData> data, Sptr<calibController> controller) :

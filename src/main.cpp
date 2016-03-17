@@ -137,7 +137,7 @@ int main(int argc, char** argv)
     processors.push_back(showProcessor);
 
     cv::namedWindow(gridWindowName);
-    //cv::moveWindow(gridWindowName, );
+    cv::moveWindow(gridWindowName, 1500, 500);
     cv::namedWindow(mainWindowName);
     cv::moveWindow(mainWindowName, 10, 10);
 #ifdef HAVE_QT
