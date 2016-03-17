@@ -2,7 +2,6 @@
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/aruco/charuco.hpp>
-#include <opencv2/cvconfig.h>
 #include <opencv2/highgui.hpp>
 #include <vector>
 #include <string>
@@ -239,15 +238,13 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
             saveFrameData();
             std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibdata->imagePoints.size(),
                                                                                     mCalibdata->allCharucoCorners.size()));
-#ifdef HAVE_QT
-            cv::displayOverlay(mainWindowName, displayMessage, OVERLAY_DELAY);
-#else
-            int baseLine = 400;
-            cv::Point textOrigin(frameCopy.cols / 10, frameCopy.rows - 2*baseLine - 10);
-            cv::putText(frame, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2);
-            cv::imshow(mainWindowName, frame);
-            cv::waitKey(300);
-#endif
+            if(!showOverlayMessage(displayMessage)) {
+                int baseLine = 400;
+                cv::Point textOrigin(frameCopy.cols / 10, frameCopy.rows - 2*baseLine - 10);
+                cv::putText(frame, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2);
+                cv::imshow(mainWindowName, frame);
+                cv::waitKey(300);
+            }
             mCapuredFrames++;
 
             mTemplateLocations.clear();
@@ -344,20 +341,12 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         }
         int calibFlags = mController->getNewFlags();
         displayMessage = "";
-        if(calibFlags & cv::CALIB_FIX_ASPECT_RATIO)
-            displayMessage.append("AR=1.0 ");
+        if(!(calibFlags & cv::CALIB_FIX_ASPECT_RATIO))
+            displayMessage.append(cv::format("AR=%.3f ", mCalibdata->cameraMatrix.at<double>(0,0)/mCalibdata->cameraMatrix.at<double>(1,1)));
         if(calibFlags & cv::CALIB_ZERO_TANGENT_DIST)
             displayMessage.append("TD=0 ");
         displayMessage.append(cv::format("K1=%.2f K2=%.2f K3=%.2f", mCalibdata->distCoeffs.at<double>(0), mCalibdata->distCoeffs.at<double>(1),
                                          mCalibdata->distCoeffs.at<double>(4)));
-        /*
-        if((calibFlags & cv::CALIB_FIX_K1))
-            displayMessage.append("K1=0 ");
-        if(calibFlags & cv::CALIB_FIX_K2)
-            displayMessage.append("K2=0 ");
-        if(calibFlags & cv::CALIB_FIX_K3)
-            displayMessage.append("K3=0 ");
-            */
         cv::putText(frameCopy, displayMessage, cv::Point(20, frameCopy.rows - (int)(1.5*textSize.height)),
                     1, VIDEO_TEXT_SIZE - 1, textColor, 2);
         return frameCopy;

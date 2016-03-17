@@ -30,7 +30,8 @@ const char* keys  =
         "{w        |         | Width of template (in corners or circles)}"
         "{h        |         | Height of template (in corners or circles)}"
         "{of       | CamParams.xml | Output file name}"
-        "{ft       | true    | Auto tuning of calibration flags}";
+        "{ft       | true    | Auto tuning of calibration flags}"
+        "{help     |         | Print help}";
 
 bool showOverlayMessage(const std::string& message)
 {
@@ -71,6 +72,11 @@ void saveCurrentParamsButton(int state, void* data)
 int main(int argc, char** argv)
 {
     cv::CommandLineParser parser(argc, argv, keys);
+    if(parser.has("help")) {
+        parser.printMessage();
+        return 0;
+    }
+    std::cout << consoleHelp << std::endl;
 
     captureParameters capParams;
 
@@ -131,7 +137,7 @@ int main(int argc, char** argv)
     processors.push_back(showProcessor);
 
     cv::namedWindow(mainWindowName);
-    cv::moveWindow(mainWindowName, 0, 0);
+    cv::moveWindow(mainWindowName, 10, 10);
 #ifdef HAVE_QT
     cv::createButton("Delete last frame", deleteButton, &dataController, CV_PUSH_BUTTON);
     cv::createButton("Delete all frames", deleteAllButton, &dataController, CV_PUSH_BUTTON);
@@ -160,7 +166,7 @@ int main(int argc, char** argv)
                 {
                     globalData->totalAvgErr = cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
                                     globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, calibrationFlags, cv::TermCriteria(
-                                        cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7) );
+                                        cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7));
                 }
                 else {
                     cv::Ptr<cv::aruco::Dictionary> dictionary =
@@ -174,6 +180,7 @@ int main(int argc, char** argv)
                 }
                 auto endPoint = high_resolution_clock::now();
                 //std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
+                dataController->printParametersToConsole(std::cout);
             }
             else if (exitStatus == PipelineExitStatus::DeleteLastFrame)
                 deleteButton(0, &dataController);
@@ -186,7 +193,7 @@ int main(int argc, char** argv)
                 static_cast<ShowProcessor*>(showProcessor.get())->switchUndistort();
 
             for (auto it = processors.begin(); it != processors.end(); ++it)
-                        (*it)->resetState();
+                (*it)->resetState();
         }
     }
     catch (std::runtime_error exp)

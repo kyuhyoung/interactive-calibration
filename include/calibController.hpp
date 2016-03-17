@@ -4,6 +4,7 @@
 #include "calibCommon.hpp"
 #include <stack>
 #include <string>
+#include <ostream>
 
 namespace calib {
 
@@ -43,6 +44,7 @@ namespace calib {
         void rememberCurrentParameters();
         void deleteAllData();
         bool saveCurrentCameraParameters() const;
+        void printParametersToConsole(std::ostream &output) const;
     };
 
 }

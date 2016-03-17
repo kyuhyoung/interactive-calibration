@@ -8,6 +8,15 @@ using namespace calib;
 #define IMAGE_WIDTH 1280
 #define IMAGE_HEIGHT 960
 
+cv::Size CalibPipeline::getCameraResolution()
+{
+    mCapture.set(CV_CAP_PROP_FRAME_WIDTH, 10000);
+    mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, 10000);
+    int w = (int)mCapture.get(CV_CAP_PROP_FRAME_WIDTH);
+    int h = (int)mCapture.get(CV_CAP_PROP_FRAME_HEIGHT);
+    return cv::Size(w,h);
+}
+
 CalibPipeline::CalibPipeline(captureParameters params, Sptr<calibController> controller) :
     mCaptureParams(params), mController(controller)
 {
@@ -60,7 +69,7 @@ PipelineExitStatus CalibPipeline::start(std::vector<Sptr<FrameProcessor>> proces
             }
     }
 
-    return PipelineExitStatus::Calibrate;
+    return PipelineExitStatus::Finished;
 }
 
 cv::Size CalibPipeline::getImageSize() const

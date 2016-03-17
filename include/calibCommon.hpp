@@ -8,12 +8,18 @@
 namespace calib
 {
     #define OVERLAY_DELAY 1000
+    bool showOverlayMessage(const std::string& message);
 
     enum class InputType { Video, Pictures };
     enum class InputVideoSource { Camera, File };
     enum class TemplateType { AcirclesGrid, Chessboard, chAruco, DoubleAcirclesGrid };
 
     static const char* mainWindowName = "Calibration";
+    static const char* gridWindowName = "Board locations";
+    static const char* consoleHelp = "Hot keys:\nesc - exit application\n"
+                              "s - save current data to .xml file\n"
+                              "r - delete last frame\n"
+                              "d - delete all frames";
 
     static const double sigmaMult = 1.96;
 

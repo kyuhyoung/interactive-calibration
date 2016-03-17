@@ -21,6 +21,8 @@ protected:
     cv::VideoCapture mCapture;
     Sptr<calibController> mController;
 
+    cv::Size getCameraResolution();
+
 public:
     CalibPipeline(captureParameters params, Sptr<calibController> controller);
     PipelineExitStatus start(std::vector<Sptr<FrameProcessor>> processors);
