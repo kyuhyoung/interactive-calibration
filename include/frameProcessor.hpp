@@ -53,19 +53,30 @@ public:
     ~CalibProcessor();
 };
 
+enum class visualisationMode {Grid, Window};
+
 class ShowProcessor : public FrameProcessor
 {
 protected:
     Sptr<calibrationData> mCalibdata;
     Sptr<calibController> mController;
+    TemplateType mBoardType;
+    visualisationMode mVisMode;
     bool mNeedUndistort;
+    double mGridViewScale;
 
+    void drawBoard(cv::Mat& img, cv::InputArray& points);
     void drawGridPoints(const cv::Mat& frame);
 public:
-    ShowProcessor(Sptr<calibrationData> data, Sptr<calibController> controller);
+    ShowProcessor(Sptr<calibrationData> data, Sptr<calibController> controller, TemplateType board);
     virtual cv::Mat processFrame(const cv::Mat& frame) override;
     virtual bool isProcessed() const override;
     virtual void resetState() override;
+
+    void setVisualisationMode(visualisationMode mode);
+    void clearBoardsView();
+    void updateBoardsView();
+
     void switchUndistort();
     void setUndistort(bool isEnabled);
     ~ShowProcessor();

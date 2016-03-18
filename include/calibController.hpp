@@ -15,6 +15,8 @@ namespace calib {
         int mCalibFlags;
         bool mNeedTuning;
         bool mConfIntervalsState;
+
+        double estimateCoverageQuality();
     public:
         calibController();
         calibController(Sptr<calibrationData> data, int initialFlags, bool autoTuning);
@@ -26,6 +28,7 @@ namespace calib {
         bool getFramesNumberState() const;
         bool getConfidenceIntrervalsState() const;
         bool getRMSState() const;
+        bool getPointsCoverageState() const;
         int getNewFlags() const;
     };
 
@@ -39,6 +42,7 @@ namespace calib {
         calibDataController(Sptr<calibrationData> data);
         calibDataController();
 
+        void filterFrames();
         void setParametersFileName(const std::string& name);
         void deleteLastFrame();
         void rememberCurrentParameters();

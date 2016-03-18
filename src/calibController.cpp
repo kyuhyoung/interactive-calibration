@@ -38,6 +38,8 @@ void calib::calibController::updateState()
         mConfIntervalsState = fConfState && cConfState && dConfState;
     }
 
+    //estimateCoverageQuality();
+
     if (getFramesNumberState() && mNeedTuning) {
         if( !(mCalibFlags & cv::CALIB_FIX_ASPECT_RATIO) &&
             mCalibData->cameraMatrix.total()) {

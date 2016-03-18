@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <iostream>
 #include <chrono>
+#include <thread>
 
 #include "calibCommon.hpp"
 #include "calibPipeline.hpp"
@@ -32,6 +33,7 @@ const char* keys  =
         "{h        |         | Height of template (in corners or circles)}"
         "{of       | CamParams.xml | Output file name}"
         "{ft       | true    | Auto tuning of calibration flags}"
+        "{vis      | grid    | Captured boards visualisation (grid, window)}"
         "{help     |         | Print help}";
 
 bool calib::showOverlayMessage(const std::string& message)
@@ -130,15 +132,19 @@ int main(int argc, char** argv)
 
     Sptr<FrameProcessor> capProcessor, showProcessor;
     capProcessor = Sptr<FrameProcessor>(new CalibProcessor(globalData, capParams.board, capParams.boardSize));
-    showProcessor = Sptr<FrameProcessor>(new ShowProcessor(globalData, controller));
+    showProcessor = Sptr<FrameProcessor>(new ShowProcessor(globalData, controller, capParams.board));
+
+    if(parser.get<std::string>("vis").find("window") == 0) {
+        static_cast<ShowProcessor*>(showProcessor.get())->setVisualisationMode(visualisationMode::Window);
+        cv::namedWindow(gridWindowName);
+        cv::moveWindow(gridWindowName, 1500, 500);
+    }
 
     Sptr<CalibPipeline> pipeline(new CalibPipeline(capParams, controller));
     std::vector<Sptr<FrameProcessor>> processors;
     processors.push_back(capProcessor);
     processors.push_back(showProcessor);
 
-    cv::namedWindow(gridWindowName);
-    cv::moveWindow(gridWindowName, 1500, 500);
     cv::namedWindow(mainWindowName);
     cv::moveWindow(mainWindowName, 10, 10);
 #ifdef HAVE_QT
@@ -186,11 +192,16 @@ int main(int argc, char** argv)
                                             globalData->imageSize, CV_16SC2, globalData->undistMap1, globalData->undistMap2);
                 //std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
                 dataController->printParametersToConsole(std::cout);
+                static_cast<ShowProcessor*>(showProcessor.get())->updateBoardsView();
             }
-            else if (exitStatus == PipelineExitStatus::DeleteLastFrame)
+            else if (exitStatus == PipelineExitStatus::DeleteLastFrame) {
                 deleteButton(0, &dataController);
-            else if (exitStatus == PipelineExitStatus::DeleteAllFrames)
+                static_cast<ShowProcessor*>(showProcessor.get())->updateBoardsView();
+            }
+            else if (exitStatus == PipelineExitStatus::DeleteAllFrames) {
                 deleteAllButton(0, &dataController);
+                static_cast<ShowProcessor*>(showProcessor.get())->updateBoardsView();
+            }
             else if (exitStatus == PipelineExitStatus::SaveCurrentData) {
                 saveCurrentParamsButton(0, &dataController);
             }
