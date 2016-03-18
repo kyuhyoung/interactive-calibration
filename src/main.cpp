@@ -3,6 +3,7 @@
 #include <opencv2/aruco/charuco.hpp>
 #include <opencv2/cvconfig.h>
 #include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 #include <string>
 #include <vector>
 #include <exception>
@@ -151,7 +152,6 @@ int main(int argc, char** argv)
         {
             auto exitStatus = pipeline->start(processors);
             if (exitStatus == PipelineExitStatus::Finished) {
-                //std::cout << "Calibration finished\n";
                 if(controller->getCommonCalibrationState())
                     saveCurrentParamsButton(0, &dataController);
                 break;
@@ -162,8 +162,8 @@ int main(int argc, char** argv)
                 globalData->imageSize = pipeline->getImageSize();
                 calibrationFlags = controller->getNewFlags();
 
-                using namespace std::chrono;
-                auto startPoint = high_resolution_clock::now();
+                //using namespace std::chrono;
+                //auto startPoint = high_resolution_clock::now();
                 if(capParams.board != TemplateType::chAruco)
                 {
                     globalData->totalAvgErr = cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
@@ -180,7 +180,10 @@ int main(int argc, char** argv)
                                                           globalData->cameraMatrix, globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, calibrationFlags,
                                                            cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7));
                 }
-                auto endPoint = high_resolution_clock::now();
+                //auto endPoint = high_resolution_clock::now();
+                cv::initUndistortRectifyMap(globalData->cameraMatrix, globalData->distCoeffs, cv::noArray(),
+                                            cv::getOptimalNewCameraMatrix(globalData->cameraMatrix, globalData->distCoeffs, globalData->imageSize, 0.0, globalData->imageSize),
+                                            globalData->imageSize, CV_16SC2, globalData->undistMap1, globalData->undistMap2);
                 //std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
                 dataController->printParametersToConsole(std::cout);
             }

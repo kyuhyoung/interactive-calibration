@@ -4,7 +4,6 @@
 #include <cmath>
 #include <ctime>
 #include <opencv2/calib3d.hpp>
-//#include <cstdio>
 
 calib::calibController::calibController() :
     mCalibData(nullptr)
@@ -35,7 +34,7 @@ void calib::calibController::updateState()
         for(int i=0; i < 5; i++)
             if(mCalibData->stdDeviations.at<double>(4+i) / fabs(mCalibData->distCoeffs.at<double>(i)) > 1)
                 dConfState = false;
-        //printf("f state %i, d state %i, c state %i\n", fConfState, dConfState, cConfState);
+
         mConfIntervalsState = fConfState && cConfState && dConfState;
     }
 
@@ -174,22 +173,22 @@ bool calib::calibDataController::saveCurrentCameraParameters() const
     if(mCalibData->cameraMatrix.total()) {
             cv::FileStorage parametersWriter(mParamsFileName, cv::FileStorage::WRITE);
             if(parametersWriter.isOpened()) {
-            time_t rawtime;
-            time(&rawtime);
-            char buf[256];
-            strftime( buf, sizeof(buf)-1, "%c", localtime(&rawtime));
+                time_t rawtime;
+                time(&rawtime);
+                char buf[256];
+                strftime(buf, sizeof(buf)-1, "%c", localtime(&rawtime));
 
-            parametersWriter << "calibrationDate" << buf;
-            parametersWriter << "framesCount" << std::max((int)mCalibData->objectPoints.size(), (int)mCalibData->allCharucoCorners.size());
-            parametersWriter << "cameraResolution" << mCalibData->imageSize;
-            parametersWriter << "cameraMatrix" << mCalibData->cameraMatrix;
-            parametersWriter << "cameraMatrix_std_dev" << mCalibData->stdDeviations.rowRange(cv::Range(0, 4));
-            parametersWriter << "dist_coeffs" << mCalibData->distCoeffs;
-            parametersWriter << "dist_coeffs_std_dev" << mCalibData->stdDeviations.rowRange(cv::Range(4, 9));
-            parametersWriter << "avg_reprojection_error" << mCalibData->totalAvgErr;
+                parametersWriter << "calibrationDate" << buf;
+                parametersWriter << "framesCount" << std::max((int)mCalibData->objectPoints.size(), (int)mCalibData->allCharucoCorners.size());
+                parametersWriter << "cameraResolution" << mCalibData->imageSize;
+                parametersWriter << "cameraMatrix" << mCalibData->cameraMatrix;
+                parametersWriter << "cameraMatrix_std_dev" << mCalibData->stdDeviations.rowRange(cv::Range(0, 4));
+                parametersWriter << "dist_coeffs" << mCalibData->distCoeffs;
+                parametersWriter << "dist_coeffs_std_dev" << mCalibData->stdDeviations.rowRange(cv::Range(4, 9));
+                parametersWriter << "avg_reprojection_error" << mCalibData->totalAvgErr;
 
-            parametersWriter.release();
-            success = true;
+                parametersWriter.release();
+                success = true;
         }
     }
     return success;

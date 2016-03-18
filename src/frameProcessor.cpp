@@ -246,10 +246,6 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
                 cv::imshow(mainWindowName, frame);
                 cv::waitKey(300);
             }
-            if(mCalibdata->cameraMatrix.total())
-                cv::initUndistortRectifyMap(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, cv::noArray(),
-                                        cv::getOptimalNewCameraMatrix(mCalibdata->cameraMatrix, mCalibdata->distCoeffs, frame.size(), 0.0, frame.size()),
-                                        frame.size(), CV_16SC2, mCalibdata->undistMap1, mCalibdata->undistMap2);
 
             mCapuredFrames++;
 
@@ -365,10 +361,10 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         cv::putText(frameCopy, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE - 1, textColor, 2);
 
         if(mCalibdata->stdDeviations.at<double>(0) == 0)
-            displayMessage = cv::format("DF = %.2f", mCalibdata->stdDeviations.at<double>(1)*1.96);
+            displayMessage = cv::format("DF = %.2f", mCalibdata->stdDeviations.at<double>(1)*sigmaMult);
         else
-            displayMessage = cv::format("DFx = %.2f DFy = %.2f", mCalibdata->stdDeviations.at<double>(0)*1.96,
-                                                    mCalibdata->stdDeviations.at<double>(1)*1.96);
+            displayMessage = cv::format("DFx = %.2f DFy = %.2f", mCalibdata->stdDeviations.at<double>(0)*sigmaMult,
+                                                    mCalibdata->stdDeviations.at<double>(1)*sigmaMult);
         if(mController->getConfidenceIntrervalsState() && mController->getFramesNumberState())
             displayMessage.append(" OK");
         cv::putText(frameCopy, displayMessage, cv::Point(20, 4*textSize.height), 1, VIDEO_TEXT_SIZE - 1, textColor, 2);
