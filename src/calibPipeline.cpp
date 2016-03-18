@@ -5,8 +5,6 @@
 using namespace calib;
 
 #define CAP_DELAY 10
-#define IMAGE_WIDTH 1280
-#define IMAGE_HEIGHT 960
 
 cv::Size CalibPipeline::getCameraResolution()
 {
@@ -28,8 +26,22 @@ PipelineExitStatus CalibPipeline::start(std::vector<Sptr<FrameProcessor>> proces
     if(mCaptureParams.source == InputVideoSource::Camera && !mCapture.isOpened())
     {
         mCapture.open(mCaptureParams.camID);
-        mCapture.set(CV_CAP_PROP_FRAME_WIDTH, IMAGE_WIDTH);
-        mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, IMAGE_HEIGHT);
+        cv::Size maxRes = getCameraResolution();
+
+        if(maxRes.width > IMAGE_MAX_WIDTH) {
+            double aR = (double)maxRes.width / maxRes.height;
+            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, IMAGE_MAX_WIDTH);
+            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, IMAGE_MAX_WIDTH/aR);
+        }
+        else if(maxRes.height > IMAGE_MAX_HEIGHT) {
+            double aR = (double)maxRes.width / maxRes.height;
+            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, IMAGE_MAX_HEIGHT);
+            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, IMAGE_MAX_HEIGHT*aR);
+        }
+        else {
+            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, maxRes.height);
+            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, maxRes.width);
+        }
         mCapture.set(CV_CAP_PROP_AUTOFOCUS, 0);
     }
     else if (mCaptureParams.source == InputVideoSource::File && !mCapture.isOpened())

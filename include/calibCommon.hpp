@@ -8,6 +8,9 @@
 namespace calib
 {
     #define OVERLAY_DELAY 1000
+    #define IMAGE_MAX_WIDTH 1280
+    #define IMAGE_MAX_HEIGHT 960
+
     bool showOverlayMessage(const std::string& message);
 
     enum class InputType { Video, Pictures };

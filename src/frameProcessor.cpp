@@ -9,8 +9,6 @@
 
 using namespace calib;
 
-#define IMAGE_WIDTH 1280
-#define IMAGE_HEIGHT 960
 #define VIDEO_TEXT_SIZE 4
 #define POINT_SIZE 5
 
@@ -41,7 +39,6 @@ static cv::SimpleBlobDetector::Params getDetectorParams()
     detectorParams.maxInertiaRatio = std::numeric_limits<float>::max();
 
     detectorParams.filterByConvexity = true;
-    //minConvexity = 0.8;
     detectorParams.minConvexity = 0.8f;
     detectorParams.maxConvexity = std::numeric_limits<float>::max();
 
@@ -189,7 +186,7 @@ CalibProcessor::CalibProcessor(Sptr<calibrationData> data, TemplateType board, c
 {
     mCapuredFrames = 0;
     mNeededFramesNum = 1;
-    mMaxTemplateOffset = sqrt(IMAGE_HEIGHT*IMAGE_HEIGHT + IMAGE_WIDTH*IMAGE_WIDTH) / 20.0;
+    mMaxTemplateOffset = sqrt(IMAGE_MAX_HEIGHT*IMAGE_MAX_HEIGHT + IMAGE_MAX_WIDTH*IMAGE_MAX_WIDTH) / 20.0;
 
     switch(mBoardType)
     {
@@ -242,7 +239,7 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
             if(!showOverlayMessage(displayMessage)) {
                 int baseLine = 400;
                 cv::Point textOrigin(frameCopy.cols / 10, frameCopy.rows - 2*baseLine - 10);
-                cv::putText(frame, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2);
+                cv::putText(frame, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2, CV_AA);
                 cv::imshow(mainWindowName, frame);
                 cv::waitKey(300);
             }
@@ -325,7 +322,7 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
             int baseLine = 400;
             cv::Size textSize = cv::getTextSize("Undistorted view", 1, VIDEO_TEXT_SIZE, 2, &baseLine);
             cv::Point textOrigin(20, frame.rows - (int)(2.5*textSize.height));
-            cv::putText(frameCopy, "Undistorted view", textOrigin, 1, VIDEO_TEXT_SIZE, textColor, 2);
+            cv::putText(frameCopy, "Undistorted view", textOrigin, 1, VIDEO_TEXT_SIZE, textColor, 2, CV_AA);
         }
         else {
             frame.copyTo(frameCopy);
@@ -344,7 +341,7 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         int baseLine = 100;
         cv::Size textSize = cv::getTextSize(displayMessage, 1, VIDEO_TEXT_SIZE - 1, 2, &baseLine);
         cv::Point textOrigin = cv::Point(20, 2*textSize.height);
-        cv::putText(frameCopy, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE - 1, textColor, 2);
+        cv::putText(frameCopy, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE - 1, textColor, 2, CV_AA);
 
         if(mCalibdata->stdDeviations.at<double>(0) == 0)
             displayMessage = cv::format("DF = %.2f", mCalibdata->stdDeviations.at<double>(1)*sigmaMult);
@@ -353,11 +350,11 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
                                                     mCalibdata->stdDeviations.at<double>(1)*sigmaMult);
         if(mController->getConfidenceIntrervalsState() && mController->getFramesNumberState())
             displayMessage.append(" OK");
-        cv::putText(frameCopy, displayMessage, cv::Point(20, 4*textSize.height), 1, VIDEO_TEXT_SIZE - 1, textColor, 2);
+        cv::putText(frameCopy, displayMessage, cv::Point(20, 4*textSize.height), 1, VIDEO_TEXT_SIZE - 1, textColor, 2, CV_AA);
 
         if(mController->getCommonCalibrationState()) {
             displayMessage = cv::format("Calibration is done");
-            cv::putText(frameCopy, displayMessage, cv::Point(20, 6*textSize.height), 1, VIDEO_TEXT_SIZE - 1, textColor, 2);
+            cv::putText(frameCopy, displayMessage, cv::Point(20, 6*textSize.height), 1, VIDEO_TEXT_SIZE - 1, textColor, 2, CV_AA);
         }
         int calibFlags = mController->getNewFlags();
         displayMessage = "";
@@ -368,7 +365,7 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         displayMessage.append(cv::format("K1=%.2f K2=%.2f K3=%.2f", mCalibdata->distCoeffs.at<double>(0), mCalibdata->distCoeffs.at<double>(1),
                                          mCalibdata->distCoeffs.at<double>(4)));
         cv::putText(frameCopy, displayMessage, cv::Point(20, frameCopy.rows - (int)(1.5*textSize.height)),
-                    1, VIDEO_TEXT_SIZE - 1, textColor, 2);
+                    1, VIDEO_TEXT_SIZE - 1, textColor, 2, CV_AA);
         return frameCopy;
     }
 
