@@ -34,6 +34,7 @@ const char* keys  =
         "{of       | CamParams.xml | Output file name}"
         "{ft       | true    | Auto tuning of calibration flags}"
         "{vis      | grid    | Captured boards visualisation (grid, window)}"
+        "{d        | 300     | Min delay between captures}"
         "{help     |         | Print help}";
 
 bool calib::showOverlayMessage(const std::string& message)
@@ -137,7 +138,7 @@ int main(int argc, char** argv)
     if(parser.get<std::string>("vis").find("window") == 0) {
         static_cast<ShowProcessor*>(showProcessor.get())->setVisualisationMode(visualisationMode::Window);
         cv::namedWindow(gridWindowName);
-        cv::moveWindow(gridWindowName, 1500, 500);
+        cv::moveWindow(gridWindowName, 1280, 500);
     }
 
     Sptr<CalibPipeline> pipeline(new CalibPipeline(capParams, controller));

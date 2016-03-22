@@ -15,6 +15,7 @@ namespace calib {
         int mCalibFlags;
         bool mNeedTuning;
         bool mConfIntervalsState;
+        bool mCoverageQualityState;
 
         double estimateCoverageQuality();
     public:

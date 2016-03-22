@@ -5,6 +5,35 @@
 #include <ctime>
 #include <opencv2/calib3d.hpp>
 
+double calib::calibController::estimateCoverageQuality()
+{
+    int gridSize = 10;
+    int xGridStep = mCalibData->imageSize.width / gridSize;
+    int yGridStep = mCalibData->imageSize.height / gridSize;
+    std::vector<int> pointsInCell(gridSize*gridSize);
+
+    std::fill(pointsInCell.begin(), pointsInCell.end(), 0);
+
+    for(auto it = mCalibData->imagePoints.begin(); it != mCalibData->imagePoints.end(); ++it)
+        for(auto pointIt = (*it).begin(); pointIt != (*it).end(); ++pointIt) {
+            int i = (int)((*pointIt).x / xGridStep);
+            int j = (int)((*pointIt).y / yGridStep);
+            pointsInCell[i*gridSize + j]++;
+        }
+
+    for(auto it = mCalibData->allCharucoCorners.begin(); it != mCalibData->allCharucoCorners.end(); ++it)
+        for(int l = 0; l < (*it).size[0]; l++) {
+            int i = (int)((*it).at<float>(l, 0) / xGridStep);
+            int j = (int)((*it).at<float>(l, 1) / yGridStep);
+            pointsInCell[i*gridSize + j]++;
+        }
+
+    cv::Mat mean, stdDev;
+    cv::meanStdDev(pointsInCell, mean, stdDev);
+
+    return mean.at<double>(0) / (stdDev.at<double>(0) + 1e-7);
+}
+
 calib::calibController::calibController() :
     mCalibData(nullptr)
 {
@@ -17,6 +46,7 @@ calib::calibController::calibController(Sptr<calib::calibrationData> data, int i
     mCalibFlags = initialFlags;
     mNeedTuning = autoTuning;
     mConfIntervalsState = false;
+    mCoverageQualityState = false;
 }
 
 void calib::calibController::updateState()
@@ -31,14 +61,15 @@ void calib::calibController::updateState()
                 sigmaMult*mCalibData->stdDeviations.at<double>(3) / mCalibData->cameraMatrix.at<double>(1,2) < relErrEps)
             cConfState = true;
 
-        for(int i=0; i < 5; i++)
+        for(int i = 0; i < 5; i++)
             if(mCalibData->stdDeviations.at<double>(4+i) / fabs(mCalibData->distCoeffs.at<double>(i)) > 1)
                 dConfState = false;
 
         mConfIntervalsState = fConfState && cConfState && dConfState;
     }
 
-    //estimateCoverageQuality();
+    if(getFramesNumberState())
+        mCoverageQualityState = estimateCoverageQuality() > 1.7 ? true : false;
 
     if (getFramesNumberState() && mNeedTuning) {
         if( !(mCalibFlags & cv::CALIB_FIX_ASPECT_RATIO) &&
@@ -85,8 +116,8 @@ void calib::calibController::updateState()
 bool calib::calibController::getCommonCalibrationState() const
 {
     int rating = (int)getFramesNumberState() + (int)getConfidenceIntrervalsState() +
-            (int)getRMSState();
-    return rating == 3;
+            (int)getRMSState() + (int)mCoverageQualityState;
+    return rating == 4;
 }
 
 bool calib::calibController::getFramesNumberState() const

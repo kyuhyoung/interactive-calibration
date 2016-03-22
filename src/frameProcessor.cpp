@@ -282,9 +282,7 @@ void ShowProcessor::drawBoard(cv::Mat &img, cv::InputArray &points)
     poly.resize(templateHull.size());
     for(size_t i=0; i<templateHull.size();i++)
         poly[i] = cv::Point((int)(templateHull[i].x*mGridViewScale), (int)(templateHull[i].y*mGridViewScale));
-    std::vector<std::vector<cv::Point>> hullsArr;
-    hullsArr.push_back(poly);
-    cv::fillPoly(tmpView, hullsArr, cv::Scalar(0, 255, 0));
+    cv::fillConvexPoly(tmpView, poly, cv::Scalar(0, 255, 0), CV_AA);
     cv::addWeighted(tmpView, .2, img, 1, 0, img);
 }
 
