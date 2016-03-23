@@ -11,7 +11,7 @@ static const char* cvDistCoeffErr = "Distortion coefficients must be 1x4, 4x1, 1
 double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
                     const CvMat* imagePoints, const CvMat* npoints,
                     CvSize imageSize, CvMat* cameraMatrix, CvMat* distCoeffs,
-                    CvMat* rvecs, CvMat* tvecs, CvMat* stdDevs, int flags, CvTermCriteria termCrit )
+                    CvMat* rvecs, CvMat* tvecs, CvMat* stdDevs, CvMat* perViewErrors, int flags, CvTermCriteria termCrit )
 {
     const int NINTRINSIC = CV_CALIB_NINTRINSIC;
     double reprojErr = 0;
@@ -355,7 +355,7 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
 
             reprojErr += norm(_err, NORM_L2SQR);
         }
-        if(solver.state == CvLevMarq::CALC_J)
+        if(solver.state == CvLevMarq::CALC_J && stdDevs)
             cvarrToMat(_JtJ).copyTo(JtJcopy);
         if( _errNorm )
             *_errNorm = reprojErr;
@@ -365,9 +365,16 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
     cvConvert( &matA, cameraMatrix );
     cvConvert( &_k, distCoeffs );
 
-    for( i = 0; i < nimages; i++ )
+    for( i = 0, pos = 0; i < nimages; i++)
     {
         CvMat src, dst;
+        if( perViewErrors )
+        {
+            ni = npoints->data.i[i*npstep];
+            perViewErrors->data.db[i] = std::sqrt(cv::norm(allErrors.colRange(pos, pos + ni), NORM_L2SQR) / ni);
+            pos+=ni;
+        }
+
         if( rvecs )
         {
             src = cvMat( 3, 1, CV_64F, solver.param->data.db + NINTRINSIC + i*6 );
@@ -485,10 +492,10 @@ static void collectCalibrationData( InputArrayOfArrays objectPoints,
     }
 }
 
-double cvfork::calibrateCamera( InputArrayOfArrays _objectPoints,
+double cvfork::calibrateCamera(InputArrayOfArrays _objectPoints,
                             InputArrayOfArrays _imagePoints,
                             Size imageSize, InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
-                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, OutputArray _stdDeviations, int flags, TermCriteria criteria )
+                            OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, OutputArray _stdDeviations, OutputArray _perViewErrors, int flags, TermCriteria criteria )
 {
     int rtype = CV_64F;
     Mat cameraMatrix = _cameraMatrix.getMat();
@@ -502,15 +509,17 @@ double cvfork::calibrateCamera( InputArrayOfArrays _objectPoints,
 
     int nimages = int(_objectPoints.total());
     CV_Assert( nimages > 0 );
-    Mat objPt, imgPt, npoints, rvecM, tvecM, stdDeviationsM;
+    Mat objPt, imgPt, npoints, rvecM, tvecM, stdDeviationsM, errorsM;
 
     bool rvecs_needed = _rvecs.needed(), tvecs_needed = _tvecs.needed(),
-            stddev_needed = _stdDeviations.needed();
+            stddev_needed = _stdDeviations.needed(), errors_needed = _perViewErrors.needed();
 
     bool rvecs_mat_vec = _rvecs.isMatVector();
     bool tvecs_mat_vec = _tvecs.isMatVector();
     bool stddev_vec = _stdDeviations.isVector();
+    bool errors_vec = _perViewErrors.isVector();
     CV_Assert( !stddev_vec );
+    CV_Assert( !errors_vec );
 
     if( rvecs_needed ) {
         _rvecs.create(nimages, 1, CV_64FC3);
@@ -539,17 +548,27 @@ double cvfork::calibrateCamera( InputArrayOfArrays _objectPoints,
             stdDeviationsM = _stdDeviations.getMat();
     }
 
+    if( errors_needed) {
+        _perViewErrors.create(nimages, 1, CV_64F);
+
+        if(stddev_vec)
+            errorsM.create(nimages, 1, CV_64F);
+        else
+            errorsM = _perViewErrors.getMat();
+    }
+
     collectCalibrationData( _objectPoints, _imagePoints, noArray(),
                             objPt, imgPt, 0, npoints );
     CvMat c_objPt = objPt, c_imgPt = imgPt, c_npoints = npoints;
     CvMat c_cameraMatrix = cameraMatrix, c_distCoeffs = distCoeffs;
-    CvMat c_rvecM = rvecM, c_tvecM = tvecM, c_stdDev = stdDeviationsM;
+    CvMat c_rvecM = rvecM, c_tvecM = tvecM, c_stdDev = stdDeviationsM, c_errors = errorsM;
 
     double reprojErr = cvfork::cvCalibrateCamera2(&c_objPt, &c_imgPt, &c_npoints, imageSize,
                                           &c_cameraMatrix, &c_distCoeffs,
                                           rvecs_needed ? &c_rvecM : NULL,
                                           tvecs_needed ? &c_tvecM : NULL,
-                                          stddev_needed ? &c_stdDev : NULL, flags, criteria );
+                                          stddev_needed ? &c_stdDev : NULL,
+                                          errors_needed ? &c_errors : NULL, flags, criteria );
 
     // overly complicated and inefficient rvec/ tvec handling to support vector<Mat>
     for(int i = 0; i < nimages; i++ )
@@ -577,8 +596,8 @@ double cvfork::calibrateCamera( InputArrayOfArrays _objectPoints,
 double cvfork::calibrateCameraCharuco(InputArrayOfArrays _charucoCorners, InputArrayOfArrays _charucoIds,
                               Ptr<aruco::CharucoBoard> &_board, Size imageSize,
                               InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
-                              OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, OutputArray _stdDeviations, int flags,
-                              TermCriteria criteria) {
+                              OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, OutputArray _stdDeviations, OutputArray _perViewErrors,
+                              int flags, TermCriteria criteria) {
 
     CV_Assert(_charucoIds.total() > 0 && (_charucoIds.total() == _charucoCorners.total()));
 
@@ -598,7 +617,7 @@ double cvfork::calibrateCameraCharuco(InputArrayOfArrays _charucoCorners, InputA
     }
 
     return cvfork::calibrateCamera(allObjPoints, _charucoCorners, imageSize, _cameraMatrix, _distCoeffs,
-                           _rvecs, _tvecs, _stdDeviations, flags, criteria);
+                           _rvecs, _tvecs, _stdDeviations, _perViewErrors, flags, criteria);
 }
 
 

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <ctime>
 #include <opencv2/calib3d.hpp>
+#include <opencv2/imgproc.hpp>
 
 double calib::calibController::estimateCoverageQuality()
 {
@@ -69,7 +70,7 @@ void calib::calibController::updateState()
     }
 
     if(getFramesNumberState())
-        mCoverageQualityState = estimateCoverageQuality() > 1.7 ? true : false;
+        mCoverageQualityState = estimateCoverageQuality() > 1.9 ? true : false;
 
     if (getFramesNumberState() && mNeedTuning) {
         if( !(mCalibFlags & cv::CALIB_FIX_ASPECT_RATIO) &&
@@ -245,4 +246,12 @@ void calib::calibDataController::printParametersToConsole(std::ostream &output) 
     output << "K3 = " << mCalibData->distCoeffs.at<double>(4) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(8) << std::endl;
     output << "TD1 = " << mCalibData->distCoeffs.at<double>(2) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(6) << std::endl;
     output << "TD2 = " << mCalibData->distCoeffs.at<double>(3) << " +- " << sigmaMult*mCalibData->stdDeviations.at<double>(7) << std::endl;
+}
+
+void calib::calibDataController::updateUndistortMap()
+{
+    cv::initUndistortRectifyMap(mCalibData->cameraMatrix, mCalibData->distCoeffs, cv::noArray(),
+                                cv::getOptimalNewCameraMatrix(mCalibData->cameraMatrix, mCalibData->distCoeffs, mCalibData->imageSize, 0.0, mCalibData->imageSize),
+                                mCalibData->imageSize, CV_16SC2, mCalibData->undistMap1, mCalibData->undistMap2);
+
 }

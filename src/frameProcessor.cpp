@@ -309,8 +309,8 @@ ShowProcessor::ShowProcessor(Sptr<calibrationData> data, Sptr<calibController> c
 
 cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
 {
-    auto textColor = cv::Scalar(0,0,255);
     if(mCalibdata->cameraMatrix.size[0] && mCalibdata->distCoeffs.size[0]) {
+        cv::Scalar textColor = cv::Scalar(0,0,255);
         cv::Mat frameCopy;
 
         if (mNeedUndistort && mController->getFramesNumberState()) {

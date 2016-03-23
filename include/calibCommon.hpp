@@ -31,9 +31,9 @@ namespace calib
         cv::Mat cameraMatrix;
         cv::Mat distCoeffs;
         cv::Mat stdDeviations;
+        cv::Mat perViewErrors;
         std::vector<cv::Mat> rvecs;
         std::vector<cv::Mat> tvecs;
-        std::vector<float> reprojErrs;
         double totalAvgErr;
         cv::Size imageSize;
 

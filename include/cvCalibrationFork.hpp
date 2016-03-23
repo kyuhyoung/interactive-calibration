@@ -14,8 +14,8 @@ using namespace cv;
 double calibrateCamera(InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,
                                      InputOutputArray cameraMatrix, InputOutputArray distCoeffs,
-                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, OutputArray _stdDeviations,
-                                     int flags = 0, TermCriteria criteria = TermCriteria(
+                                     OutputArrayOfArrays rvecs, OutputArrayOfArrays tvecs, OutputArray stdDeviations,
+                                     OutputArray perViewErrors, int flags = 0, TermCriteria criteria = TermCriteria(
                                         TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
 
 double cvCalibrateCamera2( const CvMat* object_points,
@@ -27,6 +27,7 @@ double cvCalibrateCamera2( const CvMat* object_points,
                                 CvMat* rotation_vectors CV_DEFAULT(NULL),
                                 CvMat* translation_vectors CV_DEFAULT(NULL),
                                 CvMat* stdDeviations_vector CV_DEFAULT(NULL),
+                                CvMat* perViewErrors_vector CV_DEFAULT(NULL),
                                 int flags CV_DEFAULT(0),
                                 CvTermCriteria term_crit CV_DEFAULT(cvTermCriteria(
                                     CV_TERMCRIT_ITER+CV_TERMCRIT_EPS,30,DBL_EPSILON)) );
@@ -34,8 +35,8 @@ double cvCalibrateCamera2( const CvMat* object_points,
 double calibrateCameraCharuco(InputArrayOfArrays _charucoCorners, InputArrayOfArrays _charucoIds,
                               Ptr<aruco::CharucoBoard> &_board, Size imageSize,
                               InputOutputArray _cameraMatrix, InputOutputArray _distCoeffs,
-                              OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, OutputArray _stdDeviations, int flags = 0,
-                              TermCriteria criteria = TermCriteria(
+                              OutputArrayOfArrays _rvecs, OutputArrayOfArrays _tvecs, OutputArray _stdDeviations, OutputArray _perViewErrors,
+                              int flags = 0, TermCriteria criteria = TermCriteria(
                                     TermCriteria::COUNT + TermCriteria::EPS, 30, DBL_EPSILON) );
 
 class CvLevMarqFork : public CvLevMarq

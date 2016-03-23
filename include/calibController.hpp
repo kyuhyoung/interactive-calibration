@@ -50,6 +50,7 @@ namespace calib {
         void deleteAllData();
         bool saveCurrentCameraParameters() const;
         void printParametersToConsole(std::ostream &output) const;
+        void updateUndistortMap();
     };
 
 }
