@@ -198,39 +198,49 @@ void CalibProcessor::showCaptureMessage(const cv::Mat& frame, const std::string 
 bool CalibProcessor::checkLastFrame()
 {
     bool isFrameBad = false;
-    if (mCalibdata->cameraMatrix.total())
-    {
-        if(mBoardType != TemplateType::chAruco) {
-            cv::Mat r, t, angles;
-            cv::solvePnP(mCalibdata->objectPoints.back(), mCurrentImagePoints, mCalibdata->cameraMatrix, mCalibdata->distCoeffs, r, t);
-            RodriguesToEuler(r, angles, CALIB_DEGREES);
+    cv::Mat tmpCamMatrix;
 
-            if(fabs(angles.at<double>(0)) > 40 || fabs(angles.at<double>(1) > 40)) {
-                mCalibdata->objectPoints.pop_back();
-                mCalibdata->imagePoints.pop_back();
-                isFrameBad = true;
-            }
-            //printf("angles: %f %f %f\n", angles.at<double>(0), angles.at<double>(1), angles.at<double>(2));
+    if(!mCalibdata->cameraMatrix.total()) {
+        tmpCamMatrix = cv::Mat::eye(3, 3, CV_64F);
+        tmpCamMatrix.at<double>(0,0) = 20000;
+        tmpCamMatrix.at<double>(1,1) = 20000;
+        tmpCamMatrix.at<double>(0,2) = mCalibdata->imageSize.height/2;
+        tmpCamMatrix.at<double>(1,2) = mCalibdata->imageSize.width/2;
+    }
+    else
+        mCalibdata->cameraMatrix.copyTo(tmpCamMatrix);
+
+    if(mBoardType != TemplateType::chAruco) {
+        cv::Mat r, t, angles;
+        cv::solvePnP(mCalibdata->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibdata->distCoeffs, r, t);
+        RodriguesToEuler(r, angles, CALIB_DEGREES);
+
+        if(fabs(angles.at<double>(0)) > 40 || fabs(angles.at<double>(1) > 40)) {
+            mCalibdata->objectPoints.pop_back();
+            mCalibdata->imagePoints.pop_back();
+            isFrameBad = true;
         }
-        else {
-            cv::Mat r, t, angles;
-            std::vector<cv::Point3f> allObjPoints;
-            allObjPoints.reserve(mCurrentCharucoIds.total());
-            for(size_t i = 0; i < mCurrentCharucoIds.total(); i++) {
-                int pointID = mCurrentCharucoIds.at<int>(i);
-                CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->chessboardCorners.size());
-                allObjPoints.push_back(mCharucoBoard->chessboardCorners[pointID]);
-            }
-
-            cv::solvePnP(allObjPoints, mCurrentCharucoCorners, mCalibdata->cameraMatrix, mCalibdata->distCoeffs, r, t);
-            RodriguesToEuler(r, angles, CALIB_DEGREES);
-
-            if(180.0 - fabs(angles.at<double>(0)) > 40 || fabs(angles.at<double>(1) > 40)) {
-                isFrameBad = true;
-                mCalibdata->allCharucoCorners.pop_back();
-                mCalibdata->allCharucoIds.pop_back();
-            }
+        //printf("angles: %f %f %f\n", angles.at<double>(0), angles.at<double>(1), angles.at<double>(2));
+    }
+    else {
+        cv::Mat r, t, angles;
+        std::vector<cv::Point3f> allObjPoints;
+        allObjPoints.reserve(mCurrentCharucoIds.total());
+        for(size_t i = 0; i < mCurrentCharucoIds.total(); i++) {
+            int pointID = mCurrentCharucoIds.at<int>(i);
+            CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->chessboardCorners.size());
+            allObjPoints.push_back(mCharucoBoard->chessboardCorners[pointID]);
         }
+
+        cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibdata->distCoeffs, r, t);
+        RodriguesToEuler(r, angles, CALIB_DEGREES);
+
+        if(180.0 - fabs(angles.at<double>(0)) > 40 || fabs(angles.at<double>(1) > 40)) {
+            isFrameBad = true;
+            mCalibdata->allCharucoCorners.pop_back();
+            mCalibdata->allCharucoIds.pop_back();
+        }
+        //printf("angles: %f %f %f\n", angles.at<double>(0), angles.at<double>(1), angles.at<double>(2));
     }
     return isFrameBad;
 }

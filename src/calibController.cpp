@@ -155,6 +155,42 @@ calib::calibDataController::calibDataController()
 
 }
 
+void calib::calibDataController::filterFrames()
+{
+    size_t numberOfFrames = std::max(mCalibData->allCharucoIds.size(), mCalibData->imagePoints.size());
+    CV_Assert(numberOfFrames == mCalibData->perViewErrors.total());
+    if(numberOfFrames > 30) {
+
+        double worstValue = HUGE_VAL;
+        size_t worstElemIndex = 0;
+        std::vector<double> criterionValues(numberOfFrames);
+        for(size_t i=0; i < numberOfFrames; i++) {
+
+            criterionValues[i] = mCalibData->perViewErrors.at<double>(i);
+            if(criterionValues[i] < worstValue) {
+                worstValue = criterionValues[i];
+                worstElemIndex = i;
+            }
+        }
+        showOverlayMessage(cv::format("Frame %d is worst", worstElemIndex + 1));
+
+        if(mCalibData->imagePoints.size()) {
+            mCalibData->imagePoints.erase(mCalibData->imagePoints.begin() + worstElemIndex);
+            mCalibData->objectPoints.erase(mCalibData->objectPoints.begin() + worstElemIndex);
+        }
+        else {
+            mCalibData->allCharucoCorners.erase(mCalibData->allCharucoCorners.begin() + worstElemIndex);
+            mCalibData->allCharucoIds.erase(mCalibData->allCharucoIds.begin() + worstElemIndex);
+        }
+
+        cv::Mat newErrorsVec = cv::Mat(numberOfFrames - 1, 1, CV_64F);
+        std::copy_n(mCalibData->perViewErrors.ptr<double>(0), worstElemIndex, newErrorsVec.ptr<double>(0));
+        std::copy(mCalibData->perViewErrors.ptr<double>(worstElemIndex + 1), mCalibData->perViewErrors.ptr<double>(numberOfFrames),
+                    newErrorsVec.ptr<double>(worstElemIndex));
+        mCalibData->perViewErrors = newErrorsVec;
+    }
+}
+
 void calib::calibDataController::setParametersFileName(const std::string &name)
 {
     mParamsFileName = name;

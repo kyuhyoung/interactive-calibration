@@ -192,6 +192,8 @@ int main(int argc, char** argv)
 
                 dataController->updateUndistortMap();
                 dataController->printParametersToConsole(std::cout);
+
+                dataController->filterFrames();
                 static_cast<ShowProcessor*>(showProcessor.get())->updateBoardsView();
             }
             else if (exitStatus == PipelineExitStatus::DeleteLastFrame) {
