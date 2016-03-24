@@ -1,4 +1,6 @@
 #include "frameProcessor.hpp"
+#include "rotationConverters.hpp"
+
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/aruco/charuco.hpp>
@@ -141,6 +143,7 @@ void CalibProcessor::saveFrameData()
     switch(mBoardType)
     {
     case TemplateType::Chessboard:
+        objectPoints.reserve(mBoardSize.height*mBoardSize.width);
         for( int i = 0; i < mBoardSize.height; ++i )
             for( int j = 0; j < mBoardSize.width; ++j )
                 objectPoints.push_back(cv::Point3f(j*squareSize, i*squareSize, 0));
@@ -152,6 +155,7 @@ void CalibProcessor::saveFrameData()
         mCalibdata->allCharucoIds.push_back(mCurrentCharucoIds);
         break;
     case TemplateType::AcirclesGrid:
+        objectPoints.reserve(mBoardSize.height*mBoardSize.width);
         for( int i = 0; i < mBoardSize.height; i++ )
             for( int j = 0; j < mBoardSize.width; j++ )
                 objectPoints.push_back(cv::Point3f((2*j + i % 2)*squareSize, i*squareSize, 0));
@@ -162,6 +166,7 @@ void CalibProcessor::saveFrameData()
     {
         float gridCenterX = (2*((float)mBoardSize.width - 1) + 1)*squareSize + acircleGrid2Distance/2;
         float gridCenterY = (mBoardSize.height - 1)*squareSize/2;
+        objectPoints.reserve(2*mBoardSize.height*mBoardSize.width);
 
         //white part
         for( int i = 0; i < mBoardSize.height; i++ )
@@ -179,6 +184,55 @@ void CalibProcessor::saveFrameData()
     }
         break;
     }
+}
+
+void CalibProcessor::showCaptureMessage(const cv::Mat& frame, const std::string &message)
+{
+    int baseLine = 400;
+    cv::Point textOrigin(frame.cols / 10, frame.rows - 2*baseLine - 10);
+    cv::putText(frame, message, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2, CV_AA);
+    cv::imshow(mainWindowName, frame);
+    cv::waitKey(300);
+}
+
+bool CalibProcessor::checkLastFrame()
+{
+    bool isFrameBad = false;
+    if (mCalibdata->cameraMatrix.total())
+    {
+        if(mBoardType != TemplateType::chAruco) {
+            cv::Mat r, t, angles;
+            cv::solvePnP(mCalibdata->objectPoints.back(), mCurrentImagePoints, mCalibdata->cameraMatrix, mCalibdata->distCoeffs, r, t);
+            RodriguesToEuler(r, angles, CALIB_DEGREES);
+
+            if(fabs(angles.at<double>(0)) > 40 || fabs(angles.at<double>(1) > 40)) {
+                mCalibdata->objectPoints.pop_back();
+                mCalibdata->imagePoints.pop_back();
+                isFrameBad = true;
+            }
+            //printf("angles: %f %f %f\n", angles.at<double>(0), angles.at<double>(1), angles.at<double>(2));
+        }
+        else {
+            cv::Mat r, t, angles;
+            std::vector<cv::Point3f> allObjPoints;
+            allObjPoints.reserve(mCurrentCharucoIds.total());
+            for(size_t i = 0; i < mCurrentCharucoIds.total(); i++) {
+                int pointID = mCurrentCharucoIds.at<int>(i);
+                CV_Assert(pointID >= 0 && pointID < (int)mCharucoBoard->chessboardCorners.size());
+                allObjPoints.push_back(mCharucoBoard->chessboardCorners[pointID]);
+            }
+
+            cv::solvePnP(allObjPoints, mCurrentCharucoCorners, mCalibdata->cameraMatrix, mCalibdata->distCoeffs, r, t);
+            RodriguesToEuler(r, angles, CALIB_DEGREES);
+
+            if(180.0 - fabs(angles.at<double>(0)) > 40 || fabs(angles.at<double>(1) > 40)) {
+                isFrameBad = true;
+                mCalibdata->allCharucoCorners.pop_back();
+                mCalibdata->allCharucoIds.pop_back();
+            }
+        }
+    }
+    return isFrameBad;
 }
 
 CalibProcessor::CalibProcessor(Sptr<calibrationData> data, TemplateType board, cv::Size boardSize) :
@@ -229,23 +283,22 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
 
     if(mTemplateLocations.size() > delayBetweenCaptures)
         mTemplateLocations.pop_back();
-    if(mTemplateLocations.size() == delayBetweenCaptures && isTemplateFound)
-    {
-        if(cv::norm(mTemplateLocations[0] - mTemplateLocations[delayBetweenCaptures - 1]) < mMaxTemplateOffset)
-        {
+    if(mTemplateLocations.size() == delayBetweenCaptures && isTemplateFound) {
+        if(cv::norm(mTemplateLocations[0] - mTemplateLocations[delayBetweenCaptures - 1]) < mMaxTemplateOffset) {
             saveFrameData();
-            std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibdata->imagePoints.size(),
-                                                                                    mCalibdata->allCharucoCorners.size()));
-            if(!showOverlayMessage(displayMessage)) {
-                int baseLine = 400;
-                cv::Point textOrigin(frameCopy.cols / 10, frameCopy.rows - 2*baseLine - 10);
-                cv::putText(frame, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2, CV_AA);
-                cv::imshow(mainWindowName, frame);
-                cv::waitKey(300);
+            bool isFrameBad = checkLastFrame();
+            if (!isFrameBad) {
+                std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibdata->imagePoints.size(),
+                                                                                        mCalibdata->allCharucoCorners.size()));
+                if(!showOverlayMessage(displayMessage))
+                    showCaptureMessage(frame, displayMessage);
+                mCapuredFrames++;
             }
-
-            mCapuredFrames++;
-
+            else {
+                std::string displayMessage = "Frame rejected";
+                if(!showOverlayMessage(displayMessage))
+                    showCaptureMessage(frame, displayMessage);
+            }
             mTemplateLocations.clear();
             mTemplateLocations.resize(delayBetweenCaptures);
         }

@@ -171,16 +171,11 @@ int main(int argc, char** argv)
 
                 //using namespace std::chrono;
                 //auto startPoint = high_resolution_clock::now();
-                bool isLastFrameBad = false;
-                cv::Mat angles;
                 if(capParams.board != TemplateType::chAruco)
                 {
                     globalData->totalAvgErr = cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
-                                    globalData->distCoeffs, globalData->rvecs, cv::noArray(), globalData->stdDeviations, globalData->perViewErrors, calibrationFlags, cv::TermCriteria(
+                                    globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, globalData->perViewErrors, calibrationFlags, cv::TermCriteria(
                                         cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7));
-                    RodriguesToEuler(globalData->rvecs[globalData->rvecs.size()-1].t(), angles, CALIB_DEGREES);
-                    if(fabs(angles.at<double>(0)) > 40 || fabs(angles.at<double>(1) > 40))
-                        isLastFrameBad = true;
                 }
                 else {
                     cv::Ptr<cv::aruco::Dictionary> dictionary =
@@ -189,25 +184,15 @@ int main(int argc, char** argv)
                                 cv::aruco::CharucoBoard::create(6, 8, 200, 100, dictionary);
                     globalData->totalAvgErr =
                             cvfork::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds, charucoboard, globalData->imageSize,
-                                                          globalData->cameraMatrix, globalData->distCoeffs, globalData->rvecs, cv::noArray(), globalData->stdDeviations, globalData->perViewErrors,
+                                                          globalData->cameraMatrix, globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, globalData->perViewErrors,
                                                            calibrationFlags, cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7));
-                    RodriguesToEuler(globalData->rvecs[globalData->rvecs.size()-1].t(), angles, CALIB_DEGREES);
-                    if(180.0 - fabs(angles.at<double>(0)) > 40 || fabs(angles.at<double>(1) > 40))
-                        isLastFrameBad = true;
                 }
                 //auto endPoint = high_resolution_clock::now();
                 //std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
-                //std::cout << "Last frame rotation: " << angles << "\n";
 
-                if(!isLastFrameBad) {
-                    dataController->updateUndistortMap();
-                    dataController->printParametersToConsole(std::cout);
-                    static_cast<ShowProcessor*>(showProcessor.get())->updateBoardsView();
-                }
-                else {
-                    dataController->deleteLastFrame();
-                    showOverlayMessage("Last frame rejected");
-                }
+                dataController->updateUndistortMap();
+                dataController->printParametersToConsole(std::cout);
+                static_cast<ShowProcessor*>(showProcessor.get())->updateBoardsView();
             }
             else if (exitStatus == PipelineExitStatus::DeleteLastFrame) {
                 deleteButton(0, &dataController);

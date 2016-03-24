@@ -44,6 +44,8 @@ protected:
     bool detectAndParseACircles(const cv::Mat& frame);
     bool detectAndParseDualACircles(const cv::Mat& frame);
     void saveFrameData();
+    void showCaptureMessage(const cv::Mat &frame, const std::string& message);
+    bool checkLastFrame();
 
 public:
     CalibProcessor(Sptr<calibrationData> data, TemplateType board, cv::Size boardSize);
