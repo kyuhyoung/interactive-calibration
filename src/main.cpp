@@ -9,13 +9,13 @@
 #include <algorithm>
 #include <iostream>
 #include <chrono>
-#include <thread>
 
 #include "calibCommon.hpp"
 #include "calibPipeline.hpp"
 #include "frameProcessor.hpp"
 #include "cvCalibrationFork.hpp"
 #include "calibController.hpp"
+#include "parametersController.hpp"
 #include "rotationConverters.hpp"
 
 using namespace calib;
@@ -35,6 +35,7 @@ const char* keys  =
         "{ft       | true    | Auto tuning of calibration flags}"
         "{vis      | grid    | Captured boards visualisation (grid, window)}"
         "{d        | 300     | Min delay between captures}"
+        "{pf       | params.xml| Advanced application parameters}"
         "{help     |         | Print help}";
 
 bool calib::showOverlayMessage(const std::string& message)
@@ -81,49 +82,12 @@ int main(int argc, char** argv)
         return 0;
     }
     std::cout << consoleHelp << std::endl;
+    parametersController paramsController;
 
-    captureParameters capParams;
-
-    capParams.flipVertical = parser.get<bool>("flip");
-    capParams.captureDelay = parser.get<float>("d");
-
-    if (parser.has("v")) {
-        capParams.source = InputVideoSource::File;
-        capParams.videoFileName = parser.get<std::string>("v");
-    }
-    else {
-        capParams.source = InputVideoSource::Camera;
-        capParams.camID = parser.get<int>("ci");
-    }
-
-    auto templateType = parser.get<std::string>("t");
-
-    if(templateType.find("circles", 0) == 0) {
-        capParams.board = TemplateType::AcirclesGrid;
-        capParams.boardSize = cv::Size(4, 11);
-    }
-    else if(templateType.find("chessboard", 0) == 0) {
-        capParams.board = TemplateType::Chessboard;
-        capParams.boardSize = cv::Size(7, 7);
-    }
-    else if(templateType.find("dualcircles", 0) == 0) {
-        capParams.board = TemplateType::DoubleAcirclesGrid;
-        capParams.boardSize = cv::Size(4, 11);
-    }
-    else if(templateType.find("charuco", 0) == 0)
-        capParams.board = TemplateType::chAruco;
-
-    if(parser.has("w") && parser.has("h")) {
-        capParams.boardSize = cv::Size(parser.get<int>("w"), parser.get<int>("h"));
-        if (capParams.boardSize.width <= 0 || capParams.boardSize.height <= 0) {
-            std::cerr << "Board size must be positive\n";
-            return 0;
-        }
-    }
-    if(parser.get<std::string>("of").find(".xml") <= 0) {
-        std::cerr << "Wrong output file name: correct format is [name].xml\n";
+    if(!paramsController.loadFromParser(parser))
         return 0;
-    }
+
+    captureParameters capParams = paramsController.getCaptureParameters();
 
     Sptr<calibrationData> globalData(new calibrationData);
 
