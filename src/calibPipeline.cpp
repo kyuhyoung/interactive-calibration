@@ -15,8 +15,8 @@ cv::Size CalibPipeline::getCameraResolution()
     return cv::Size(w,h);
 }
 
-CalibPipeline::CalibPipeline(captureParameters params, Sptr<calibController> controller) :
-    mCaptureParams(params), mController(controller)
+CalibPipeline::CalibPipeline(captureParameters params) :
+    mCaptureParams(params)
 {
 
 }
@@ -75,10 +75,8 @@ PipelineExitStatus CalibPipeline::start(std::vector<Sptr<FrameProcessor>> proces
             return PipelineExitStatus::SwitchUndistort;
 
         for (auto it = processors.begin(); it != processors.end(); ++it)
-            if((*it)->isProcessed()) {
-                mController->updateState();
+            if((*it)->isProcessed())
                 return PipelineExitStatus::Calibrate;
-            }
     }
 
     return PipelineExitStatus::Finished;

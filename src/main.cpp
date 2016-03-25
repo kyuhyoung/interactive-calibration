@@ -85,6 +85,7 @@ int main(int argc, char** argv)
     captureParameters capParams;
 
     capParams.flipVertical = parser.get<bool>("flip");
+    capParams.captureDelay = parser.get<float>("d");
 
     if (parser.has("v")) {
         capParams.source = InputVideoSource::File;
@@ -141,7 +142,7 @@ int main(int argc, char** argv)
         cv::moveWindow(gridWindowName, 1280, 500);
     }
 
-    Sptr<CalibPipeline> pipeline(new CalibPipeline(capParams, controller));
+    Sptr<CalibPipeline> pipeline(new CalibPipeline(capParams));
     std::vector<Sptr<FrameProcessor>> processors;
     processors.push_back(capProcessor);
     processors.push_back(showProcessor);
@@ -192,7 +193,7 @@ int main(int argc, char** argv)
 
                 dataController->updateUndistortMap();
                 dataController->printParametersToConsole(std::cout);
-
+                controller->updateState();
                 dataController->filterFrames();
                 static_cast<ShowProcessor*>(showProcessor.get())->updateBoardsView();
             }

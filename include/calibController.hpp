@@ -39,6 +39,8 @@ namespace calib {
         Sptr<calibrationData> mCalibData;
         std::stack<cameraParameters> mParamsStack;
         std::string mParamsFileName;
+
+        double estimateGridSubsetQuality(size_t excludedIndex);
     public:
         calibDataController(Sptr<calibrationData> data);
         calibDataController();

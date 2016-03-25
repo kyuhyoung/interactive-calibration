@@ -15,14 +15,14 @@ double calib::calibController::estimateCoverageQuality()
 
     std::fill(pointsInCell.begin(), pointsInCell.end(), 0);
 
-    for(auto it = mCalibData->imagePoints.begin(); it != mCalibData->imagePoints.end(); ++it)
+    for(auto it = mCalibData->imagePoints.begin(); it != mCalibData->imagePoints.cend(); ++it)
         for(auto pointIt = (*it).begin(); pointIt != (*it).end(); ++pointIt) {
             int i = (int)((*pointIt).x / xGridStep);
             int j = (int)((*pointIt).y / yGridStep);
             pointsInCell[i*gridSize + j]++;
         }
 
-    for(auto it = mCalibData->allCharucoCorners.begin(); it != mCalibData->allCharucoCorners.end(); ++it)
+    for(auto it = mCalibData->allCharucoCorners.begin(); it != mCalibData->allCharucoCorners.cend(); ++it)
         for(int l = 0; l < (*it).size[0]; l++) {
             int i = (int)((*it).at<float>(l, 0) / xGridStep);
             int j = (int)((*it).at<float>(l, 1) / yGridStep);
@@ -144,6 +144,39 @@ int calib::calibController::getNewFlags() const
 
 //////////////////// calibDataController
 
+double calib::calibDataController::estimateGridSubsetQuality(size_t excludedIndex)
+{
+    {
+        int gridSize = 10;
+        int xGridStep = mCalibData->imageSize.width / gridSize;
+        int yGridStep = mCalibData->imageSize.height / gridSize;
+        std::vector<int> pointsInCell(gridSize*gridSize);
+
+        std::fill(pointsInCell.begin(), pointsInCell.end(), 0);
+
+        for(size_t k = 0; k < mCalibData->imagePoints.size(); k++)
+            if(k != excludedIndex)
+                for(auto pointIt = mCalibData->imagePoints[k].begin(); pointIt != mCalibData->imagePoints[k].cend(); ++pointIt) {
+                    int i = (int)((*pointIt).x / xGridStep);
+                    int j = (int)((*pointIt).y / yGridStep);
+                    pointsInCell[i*gridSize + j]++;
+                }
+
+        for(size_t k = 0; k < mCalibData->allCharucoCorners.size(); k++)
+            if(k != excludedIndex)
+                for(int l = 0; l <  mCalibData->allCharucoCorners[k].size[0]; l++) {
+                    int i = (int)(mCalibData->allCharucoCorners[k].at<float>(l, 0) / xGridStep);
+                    int j = (int)(mCalibData->allCharucoCorners[k].at<float>(l, 1) / yGridStep);
+                    pointsInCell[i*gridSize + j]++;
+                }
+
+        cv::Mat mean, stdDev;
+        cv::meanStdDev(pointsInCell, mean, stdDev);
+
+        return mean.at<double>(0) / (stdDev.at<double>(0) + 1e-7);
+    }
+}
+
 calib::calibDataController::calibDataController(Sptr<calib::calibrationData> data) :
     mCalibData(data), mParamsFileName("CamParams.xml")
 {
@@ -161,12 +194,15 @@ void calib::calibDataController::filterFrames()
     CV_Assert(numberOfFrames == mCalibData->perViewErrors.total());
     if(numberOfFrames > 30) {
 
-        double worstValue = HUGE_VAL;
+        double worstValue = HUGE_VAL, alpha = 0.05, maxQuality = estimateGridSubsetQuality(-1);
         size_t worstElemIndex = 0;
         std::vector<double> criterionValues(numberOfFrames);
-        for(size_t i=0; i < numberOfFrames; i++) {
+        for(size_t i = 0; i < numberOfFrames; i++) {
 
-            criterionValues[i] = mCalibData->perViewErrors.at<double>(i);
+            double gridQDelta = maxQuality - estimateGridSubsetQuality(i);
+            //printf("grid delta = %f  ", gridQDelta);
+            criterionValues[i] = mCalibData->perViewErrors.at<double>(i)*alpha +
+                    gridQDelta*(1 - alpha);
             if(criterionValues[i] < worstValue) {
                 worstValue = criterionValues[i];
                 worstElemIndex = i;
@@ -188,6 +224,7 @@ void calib::calibDataController::filterFrames()
         std::copy(mCalibData->perViewErrors.ptr<double>(worstElemIndex + 1), mCalibData->perViewErrors.ptr<double>(numberOfFrames),
                     newErrorsVec.ptr<double>(worstElemIndex));
         mCalibData->perViewErrors = newErrorsVec;
+        //printf("\n");
     }
 }
 

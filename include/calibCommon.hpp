@@ -35,7 +35,7 @@ namespace calib
         std::vector<cv::Mat> rvecs;
         std::vector<cv::Mat> tvecs;
         double totalAvgErr;
-        cv::Size imageSize;
+        cv::Size imageSize = cv::Size(IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT);
 
         std::vector<std::vector<cv::Point2f>> imagePoints;
         std::vector< std::vector<cv::Point3f>> objectPoints;
