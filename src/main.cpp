@@ -34,7 +34,7 @@ const char* keys  =
         "{of       | CamParams.xml | Output file name}"
         "{ft       | true    | Auto tuning of calibration flags}"
         "{vis      | grid    | Captured boards visualisation (grid, window)}"
-        "{d        | 300     | Min delay between captures}"
+        "{d        | 900     | Min delay between captures}"
         "{pf       | params.xml| Advanced application parameters}"
         "{help     |         | Print help}";
 

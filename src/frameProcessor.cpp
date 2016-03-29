@@ -199,6 +199,7 @@ bool CalibProcessor::checkLastFrame()
 {
     bool isFrameBad = false;
     cv::Mat tmpCamMatrix;
+    const double badAngleThresh = 40;
 
     if(!mCalibdata->cameraMatrix.total()) {
         tmpCamMatrix = cv::Mat::eye(3, 3, CV_64F);
@@ -215,7 +216,7 @@ bool CalibProcessor::checkLastFrame()
         cv::solvePnP(mCalibdata->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibdata->distCoeffs, r, t);
         RodriguesToEuler(r, angles, CALIB_DEGREES);
 
-        if(fabs(angles.at<double>(0)) > 40 || fabs(angles.at<double>(1) > 40)) {
+        if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1) > badAngleThresh)) {
             mCalibdata->objectPoints.pop_back();
             mCalibdata->imagePoints.pop_back();
             isFrameBad = true;
@@ -235,7 +236,7 @@ bool CalibProcessor::checkLastFrame()
         cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibdata->distCoeffs, r, t);
         RodriguesToEuler(r, angles, CALIB_DEGREES);
 
-        if(180.0 - fabs(angles.at<double>(0)) > 40 || fabs(angles.at<double>(1) > 40)) {
+        if(180.0 - fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1) > badAngleThresh)) {
             isFrameBad = true;
             mCalibdata->allCharucoCorners.pop_back();
             mCalibdata->allCharucoIds.pop_back();
@@ -250,6 +251,7 @@ CalibProcessor::CalibProcessor(Sptr<calibrationData> data, captureParameters &ca
 {
     mCapuredFrames = 0;
     mNeededFramesNum = 1;
+    mDelayBetweenCaptures = static_cast<int>(capParams.captureDelay / 30);
     mMaxTemplateOffset = std::sqrt(std::pow(mCalibdata->imageSize.height, 2) +
                                    std::pow(mCalibdata->imageSize.width, 2)) / 20.0;
 
@@ -276,7 +278,6 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
     frame.copyTo(frameCopy);
     bool isTemplateFound = false;
     mCurrentImagePoints.clear();
-    int delayBetweenCaptures = 30;
 
     switch(mBoardType)
     {
@@ -294,10 +295,10 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
         break;
     }
 
-    if(mTemplateLocations.size() > delayBetweenCaptures)
+    if(mTemplateLocations.size() > mDelayBetweenCaptures)
         mTemplateLocations.pop_back();
-    if(mTemplateLocations.size() == delayBetweenCaptures && isTemplateFound) {
-        if(cv::norm(mTemplateLocations[0] - mTemplateLocations[delayBetweenCaptures - 1]) < mMaxTemplateOffset) {
+    if(mTemplateLocations.size() == mDelayBetweenCaptures && isTemplateFound) {
+        if(cv::norm(mTemplateLocations.front() - mTemplateLocations.back()) < mMaxTemplateOffset) {
             saveFrameData();
             bool isFrameBad = checkLastFrame();
             if (!isFrameBad) {
@@ -313,7 +314,7 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
                     showCaptureMessage(frame, displayMessage);
             }
             mTemplateLocations.clear();
-            mTemplateLocations.resize(delayBetweenCaptures);
+            mTemplateLocations.reserve(mDelayBetweenCaptures);
         }
     }
 

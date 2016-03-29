@@ -36,6 +36,7 @@ protected:
     cv::Ptr<cv::aruco::CharucoBoard> mCharucoBoard;
 
     int mNeededFramesNum;
+    int mDelayBetweenCaptures;
     int mCapuredFrames;
     float mMaxTemplateOffset;
 
