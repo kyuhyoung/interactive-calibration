@@ -48,7 +48,7 @@ protected:
     bool checkLastFrame();
 
 public:
-    CalibProcessor(Sptr<calibrationData> data, TemplateType board, cv::Size boardSize);
+    CalibProcessor(Sptr<calibrationData> data, captureParameters& capParams);
     virtual cv::Mat processFrame(const cv::Mat& frame) override;
     virtual bool isProcessed() const override;
     virtual void resetState() override;

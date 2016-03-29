@@ -65,10 +65,14 @@ namespace calib
         InputVideoSource source;
         TemplateType board;
         cv::Size boardSize;
+        int charucoDictName;
+        float charucoSquareLenght, charucoMarkerSize;
         float captureDelay = 500.f;
         std::string videoFileName;
         bool flipVertical;
         int camID;
+        int maxFramesNum = 30;
+        int minFramesNum = 10;
     };
 
 template <typename T>

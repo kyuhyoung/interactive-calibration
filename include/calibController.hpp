@@ -13,6 +13,7 @@ namespace calib {
     protected:
         Sptr<calibrationData> mCalibData;
         int mCalibFlags;
+        int mMinFramesNum;
         bool mNeedTuning;
         bool mConfIntervalsState;
         bool mCoverageQualityState;
@@ -20,7 +21,8 @@ namespace calib {
         double estimateCoverageQuality();
     public:
         calibController();
-        calibController(Sptr<calibrationData> data, int initialFlags, bool autoTuning);
+        calibController(Sptr<calibrationData> data, int initialFlags, bool autoTuning,
+                        int minFramesNum);
 
         void updateState();
 
@@ -39,10 +41,11 @@ namespace calib {
         Sptr<calibrationData> mCalibData;
         std::stack<cameraParameters> mParamsStack;
         std::string mParamsFileName;
+        int mMaxFramesNum;
 
         double estimateGridSubsetQuality(size_t excludedIndex);
     public:
-        calibDataController(Sptr<calibrationData> data);
+        calibDataController(Sptr<calibrationData> data, int maxFrames);
         calibDataController();
 
         void filterFrames();

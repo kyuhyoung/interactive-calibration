@@ -245,18 +245,21 @@ bool CalibProcessor::checkLastFrame()
     return isFrameBad;
 }
 
-CalibProcessor::CalibProcessor(Sptr<calibrationData> data, TemplateType board, cv::Size boardSize) :
-    mCalibdata(data), mBoardType(board), mBoardSize(boardSize)
+CalibProcessor::CalibProcessor(Sptr<calibrationData> data, captureParameters &capParams) :
+    mCalibdata(data), mBoardType(capParams.board), mBoardSize(capParams.boardSize)
 {
     mCapuredFrames = 0;
     mNeededFramesNum = 1;
-    mMaxTemplateOffset = sqrt(IMAGE_MAX_HEIGHT*IMAGE_MAX_HEIGHT + IMAGE_MAX_WIDTH*IMAGE_MAX_WIDTH) / 20.0;
+    mMaxTemplateOffset = std::sqrt(std::pow(mCalibdata->imageSize.height, 2) +
+                                   std::pow(mCalibdata->imageSize.width, 2)) / 20.0;
 
     switch(mBoardType)
     {
     case TemplateType::chAruco:
-        mArucoDictionary = cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(0));
-        mCharucoBoard = cv::aruco::CharucoBoard::create(6, 8, 200, 100, mArucoDictionary);
+        mArucoDictionary = cv::aruco::getPredefinedDictionary(
+                    cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
+        mCharucoBoard = cv::aruco::CharucoBoard::create(mBoardSize.width, mBoardSize.height, capParams.charucoSquareLenght,
+                                                        capParams.charucoMarkerSize, mArucoDictionary);
         break;
     case TemplateType::AcirclesGrid:
         mBlobDetectorPtr = cv::SimpleBlobDetector::create();

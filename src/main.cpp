@@ -92,12 +92,13 @@ int main(int argc, char** argv)
     Sptr<calibrationData> globalData(new calibrationData);
 
     int calibrationFlags = 0;
-    Sptr<calibController> controller(new calibController(globalData, calibrationFlags, parser.get<bool>("ft")));
-    Sptr<calibDataController> dataController(new calibDataController(globalData));
+    Sptr<calibController> controller(new calibController(globalData, calibrationFlags,
+                                                         parser.get<bool>("ft"), capParams.minFramesNum));
+    Sptr<calibDataController> dataController(new calibDataController(globalData, capParams.maxFramesNum));
     dataController->setParametersFileName(parser.get<std::string>("of"));
 
     Sptr<FrameProcessor> capProcessor, showProcessor;
-    capProcessor = Sptr<FrameProcessor>(new CalibProcessor(globalData, capParams.board, capParams.boardSize));
+    capProcessor = Sptr<FrameProcessor>(new CalibProcessor(globalData, capParams));
     showProcessor = Sptr<FrameProcessor>(new ShowProcessor(globalData, controller, capParams.board));
 
     if(parser.get<std::string>("vis").find("window") == 0) {

@@ -5,15 +5,17 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
 {
     cv::FileStorage reader;
     reader.open(inputFileName, cv::FileStorage::READ);
+
     if(!reader.isOpened()) {
         std::cerr << "Unable to open " << inputFileName << std::endl;
         return false;
     }
 
-
-
-
-
+    reader["charuco_dict"] >> mCapParams.charucoDictName;
+    reader["charuco_square_lenght"] >> mCapParams.charucoSquareLenght;
+    reader["charuco_marker_size"] >> mCapParams.charucoMarkerSize;
+    reader["max_frames_num"] >> mCapParams.maxFramesNum;
+    reader["min_frames_num"] >> mCapParams.minFramesNum;
 
     reader.release();
     return true;
@@ -59,6 +61,9 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
     else if(templateType.find("charuco", 0) == 0) {
         mCapParams.board = TemplateType::chAruco;
         mCapParams.boardSize = cv::Size(6, 8);
+        mCapParams.charucoDictName = 0;
+        mCapParams.charucoSquareLenght = 200;
+        mCapParams.charucoMarkerSize = 100;
     }
 
     if(parser.has("w") && parser.has("h")) {
@@ -73,5 +78,5 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
         return false;
     }
 
-    return true & loadFromFile(parser.get<std::string>("pf"));
+    return true && loadFromFile(parser.get<std::string>("pf"));
 }

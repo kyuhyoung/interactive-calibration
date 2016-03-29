@@ -41,11 +41,12 @@ calib::calibController::calibController() :
     mCalibFlags = 0;
 }
 
-calib::calibController::calibController(Sptr<calib::calibrationData> data, int initialFlags, bool autoTuning) :
+calib::calibController::calibController(Sptr<calib::calibrationData> data, int initialFlags, bool autoTuning, int minFramesNum) :
     mCalibData(data)
 {
     mCalibFlags = initialFlags;
     mNeedTuning = autoTuning;
+    mMinFramesNum = minFramesNum;
     mConfIntervalsState = false;
     mCoverageQualityState = false;
 }
@@ -123,7 +124,7 @@ bool calib::calibController::getCommonCalibrationState() const
 
 bool calib::calibController::getFramesNumberState() const
 {
-    return std::max(mCalibData->imagePoints.size(), mCalibData->allCharucoCorners.size()) > 10;
+    return std::max(mCalibData->imagePoints.size(), mCalibData->allCharucoCorners.size()) > mMinFramesNum;
 }
 
 bool calib::calibController::getConfidenceIntrervalsState() const
@@ -177,10 +178,10 @@ double calib::calibDataController::estimateGridSubsetQuality(size_t excludedInde
     }
 }
 
-calib::calibDataController::calibDataController(Sptr<calib::calibrationData> data) :
+calib::calibDataController::calibDataController(Sptr<calib::calibrationData> data, int maxFrames) :
     mCalibData(data), mParamsFileName("CamParams.xml")
 {
-
+    mMaxFramesNum = maxFrames;
 }
 
 calib::calibDataController::calibDataController()
@@ -192,7 +193,7 @@ void calib::calibDataController::filterFrames()
 {
     size_t numberOfFrames = std::max(mCalibData->allCharucoIds.size(), mCalibData->imagePoints.size());
     CV_Assert(numberOfFrames == mCalibData->perViewErrors.total());
-    if(numberOfFrames > 30) {
+    if(numberOfFrames >= mMaxFramesNum) {
 
         double worstValue = HUGE_VAL, alpha = 0.05, maxQuality = estimateGridSubsetQuality(-1);
         size_t worstElemIndex = 0;
