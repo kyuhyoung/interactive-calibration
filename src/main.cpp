@@ -76,6 +76,8 @@ void saveCurrentParamsButton(int state, void* data)
 
 int main(int argc, char** argv)
 {
+    const double solverEps = 1e-7;
+    const int solverMaxIters = 30;
     cv::CommandLineParser parser(argc, argv, keys);
     if(parser.has("help")) {
         parser.printMessage();
@@ -137,21 +139,21 @@ int main(int argc, char** argv)
 
                 //using namespace std::chrono;
                 //auto startPoint = high_resolution_clock::now();
-                if(capParams.board != TemplateType::chAruco)
-                {
+                if(capParams.board != TemplateType::chAruco) {
                     globalData->totalAvgErr = cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
                                     globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, globalData->perViewErrors, calibrationFlags, cv::TermCriteria(
-                                        cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7));
+                                        cv::TermCriteria::COUNT+cv::TermCriteria::EPS, solverMaxIters, solverEps));
                 }
                 else {
                     cv::Ptr<cv::aruco::Dictionary> dictionary =
-                            cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(0));
+                            cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
                     cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
-                                cv::aruco::CharucoBoard::create(6, 8, 200, 100, dictionary);
+                                cv::aruco::CharucoBoard::create(capParams.boardSize.width,
+                                                                capParams.boardSize.height, capParams.charucoSquareLenght, capParams.charucoMarkerSize, dictionary);
                     globalData->totalAvgErr =
                             cvfork::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds, charucoboard, globalData->imageSize,
                                                           globalData->cameraMatrix, globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, globalData->perViewErrors,
-                                                           calibrationFlags, cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 1e-7));
+                                                           calibrationFlags, cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, solverMaxIters, solverEps));
                 }
                 //auto endPoint = high_resolution_clock::now();
                 //std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
@@ -180,8 +182,7 @@ int main(int argc, char** argv)
                 (*it)->resetState();
         }
     }
-    catch (std::runtime_error exp)
-    {
+    catch (std::runtime_error exp) {
         std::cout << exp.what() << std::endl;
     }
 

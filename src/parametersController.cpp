@@ -16,6 +16,8 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     reader["charuco_marker_size"] >> mCapParams.charucoMarkerSize;
     reader["max_frames_num"] >> mCapParams.maxFramesNum;
     reader["min_frames_num"] >> mCapParams.minFramesNum;
+    //reader["solver_eps"] >> ;
+    //reader["solver_max_iters"] >> ''
 
     reader.release();
     return true;
