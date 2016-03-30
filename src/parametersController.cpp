@@ -1,6 +1,17 @@
 #include "parametersController.hpp"
 #include <iostream>
 
+template <typename T>
+static bool readFromNode(cv::FileNode node, T& value)
+{
+    if(!node.isNone()) {
+        node >> value;
+        return true;
+    }
+    else
+        return false;
+}
+
 bool calib::parametersController::loadFromFile(const std::string &inputFileName)
 {
     cv::FileStorage reader;
@@ -11,13 +22,13 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
         return false;
     }
 
-    reader["charuco_dict"] >> mCapParams.charucoDictName;
-    reader["charuco_square_lenght"] >> mCapParams.charucoSquareLenght;
-    reader["charuco_marker_size"] >> mCapParams.charucoMarkerSize;
-    reader["max_frames_num"] >> mCapParams.maxFramesNum;
-    reader["min_frames_num"] >> mCapParams.minFramesNum;
-    //reader["solver_eps"] >> ;
-    //reader["solver_max_iters"] >> ''
+    readFromNode(reader["charuco_dict"], mCapParams.charucoDictName);
+    readFromNode(reader["charuco_square_lenght"], mCapParams.charucoSquareLenght);
+    readFromNode(reader["charuco_marker_size"], mCapParams.charucoMarkerSize);
+    readFromNode(reader["max_frames_num"], mCapParams.maxFramesNum);
+    readFromNode(reader["min_frames_num"], mCapParams.minFramesNum);
+    readFromNode(reader["solver_eps"], mInternalParameters.solverEps);
+    readFromNode(reader["solver_max_iters"], mInternalParameters.solverMaxIters);
 
     reader.release();
     return true;
@@ -30,6 +41,11 @@ calib::parametersController::parametersController()
 calib::captureParameters calib::parametersController::getCaptureParameters() const
 {
     return mCapParams;
+}
+
+calib::internalParameters calib::parametersController::getInternalParameters() const
+{
+    return mInternalParameters;
 }
 
 bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)

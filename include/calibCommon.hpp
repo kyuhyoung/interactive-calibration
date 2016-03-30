@@ -75,6 +75,12 @@ namespace calib
         int minFramesNum = 10;
     };
 
+    struct internalParameters
+    {
+        double solverEps = 1e-7;
+        int solverMaxIters = 30;
+    };
+
 template <typename T>
     using Sptr = std::shared_ptr<T>;
 }

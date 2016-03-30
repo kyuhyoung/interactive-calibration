@@ -11,6 +11,7 @@ class parametersController
 {
 protected:
     captureParameters mCapParams;
+    internalParameters mInternalParameters;
 
     bool loadFromFile(const std::string& inputFileName);
 public:
@@ -18,6 +19,7 @@ public:
     parametersController(Sptr<captureParameters> params);
 
     captureParameters getCaptureParameters() const;
+    internalParameters getInternalParameters() const;
 
     bool loadFromParser(cv::CommandLineParser& parser);
 };

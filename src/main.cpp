@@ -76,8 +76,6 @@ void saveCurrentParamsButton(int state, void* data)
 
 int main(int argc, char** argv)
 {
-    const double solverEps = 1e-7;
-    const int solverMaxIters = 30;
     cv::CommandLineParser parser(argc, argv, keys);
     if(parser.has("help")) {
         parser.printMessage();
@@ -90,7 +88,10 @@ int main(int argc, char** argv)
         return 0;
 
     captureParameters capParams = paramsController.getCaptureParameters();
+    internalParameters intParams = paramsController.getInternalParameters();
 
+    cv::TermCriteria solverTermCrit = cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS,
+                                                       intParams.solverMaxIters, intParams.solverEps);
     Sptr<calibrationData> globalData(new calibrationData);
 
     int calibrationFlags = 0;
@@ -140,20 +141,25 @@ int main(int argc, char** argv)
                 //using namespace std::chrono;
                 //auto startPoint = high_resolution_clock::now();
                 if(capParams.board != TemplateType::chAruco) {
-                    globalData->totalAvgErr = cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints, globalData->imageSize, globalData->cameraMatrix,
-                                    globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, globalData->perViewErrors, calibrationFlags, cv::TermCriteria(
-                                        cv::TermCriteria::COUNT+cv::TermCriteria::EPS, solverMaxIters, solverEps));
+                    globalData->totalAvgErr =
+                            cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints,
+                                                    globalData->imageSize, globalData->cameraMatrix,
+                                                    globalData->distCoeffs, cv::noArray(), cv::noArray(),
+                                                    globalData->stdDeviations, globalData->perViewErrors,
+                                                    calibrationFlags, solverTermCrit);
                 }
                 else {
                     cv::Ptr<cv::aruco::Dictionary> dictionary =
                             cv::aruco::getPredefinedDictionary(cv::aruco::PREDEFINED_DICTIONARY_NAME(capParams.charucoDictName));
                     cv::Ptr<cv::aruco::CharucoBoard> charucoboard =
-                                cv::aruco::CharucoBoard::create(capParams.boardSize.width,
-                                                                capParams.boardSize.height, capParams.charucoSquareLenght, capParams.charucoMarkerSize, dictionary);
+                                cv::aruco::CharucoBoard::create(capParams.boardSize.width, capParams.boardSize.height,
+                                                                capParams.charucoSquareLenght, capParams.charucoMarkerSize, dictionary);
                     globalData->totalAvgErr =
-                            cvfork::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds, charucoboard, globalData->imageSize,
-                                                          globalData->cameraMatrix, globalData->distCoeffs, cv::noArray(), cv::noArray(), globalData->stdDeviations, globalData->perViewErrors,
-                                                           calibrationFlags, cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, solverMaxIters, solverEps));
+                            cvfork::calibrateCameraCharuco(globalData->allCharucoCorners, globalData->allCharucoIds,
+                                                           charucoboard, globalData->imageSize,
+                                                           globalData->cameraMatrix, globalData->distCoeffs,
+                                                           cv::noArray(), cv::noArray(), globalData->stdDeviations,
+                                                           globalData->perViewErrors, calibrationFlags, solverTermCrit);
                 }
                 //auto endPoint = high_resolution_clock::now();
                 //std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";

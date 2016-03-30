@@ -202,8 +202,10 @@ void calib::calibDataController::filterFrames()
 
             double gridQDelta = maxQuality - estimateGridSubsetQuality(i);
             //printf("grid delta = %f  ", gridQDelta);
-            criterionValues[i] = mCalibData->perViewErrors.at<double>(i)*alpha +
-                    gridQDelta*(1 - alpha);
+            //criterionValues[i] = mCalibData->perViewErrors.at<double>(i)*alpha +
+                    //gridQDelta*(1 - alpha);
+            criterionValues[i] = fmin(mCalibData->perViewErrors.at<double>(i)*alpha,
+                                      gridQDelta*(1 - alpha));
             if(criterionValues[i] < worstValue) {
                 worstValue = criterionValues[i];
                 worstElemIndex = i;
