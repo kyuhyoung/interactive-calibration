@@ -198,6 +198,8 @@ double cvfork::cvCalibrateCamera2( const CvMat* objectPoints,
     if(flags & CALIB_USE_LU) {
         solver.solveMethod = DECOMP_LU;
     }
+    else if(flags & CALIB_USE_QR)
+        solver.solveMethod = DECOMP_QR;
 
     {
     double* param = solver.param->data.db;

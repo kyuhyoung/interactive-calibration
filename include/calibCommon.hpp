@@ -79,6 +79,7 @@ namespace calib
     {
         double solverEps = 1e-7;
         int solverMaxIters = 30;
+        bool fastSolving = false;
     };
 
 template <typename T>

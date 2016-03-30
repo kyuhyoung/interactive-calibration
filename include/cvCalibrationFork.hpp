@@ -10,6 +10,7 @@ namespace cvfork
 using namespace cv;
 
 #define CV_CALIB_NINTRINSIC 18
+#define CALIB_USE_QR (1 << 18)
 
 double calibrateCamera(InputArrayOfArrays objectPoints,
                                      InputArrayOfArrays imagePoints, Size imageSize,

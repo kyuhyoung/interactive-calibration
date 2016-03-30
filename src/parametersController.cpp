@@ -18,8 +18,9 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     reader.open(inputFileName, cv::FileStorage::READ);
 
     if(!reader.isOpened()) {
-        std::cerr << "Unable to open " << inputFileName << std::endl;
-        return false;
+        std::cerr << "Warning: Unable to open " << inputFileName <<
+                     " Applicatioin stated with default advanvced parameters" << std::endl;
+        return true;
     }
 
     readFromNode(reader["charuco_dict"], mCapParams.charucoDictName);
@@ -29,6 +30,7 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     readFromNode(reader["min_frames_num"], mCapParams.minFramesNum);
     readFromNode(reader["solver_eps"], mInternalParameters.solverEps);
     readFromNode(reader["solver_max_iters"], mInternalParameters.solverMaxIters);
+    readFromNode(reader["fast_solver"], mInternalParameters.fastSolving);
 
     reader.release();
     return true;
@@ -96,5 +98,6 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
         return false;
     }
 
-    return true && loadFromFile(parser.get<std::string>("pf"));
+    loadFromFile(parser.get<std::string>("pf"));
+    return true;
 }

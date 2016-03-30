@@ -95,6 +95,7 @@ int main(int argc, char** argv)
     Sptr<calibrationData> globalData(new calibrationData);
 
     int calibrationFlags = 0;
+    if(intParams.fastSolving) calibrationFlags |= CALIB_USE_QR;
     Sptr<calibController> controller(new calibController(globalData, calibrationFlags,
                                                          parser.get<bool>("ft"), capParams.minFramesNum));
     Sptr<calibDataController> dataController(new calibDataController(globalData, capParams.maxFramesNum));
@@ -138,8 +139,8 @@ int main(int argc, char** argv)
                 globalData->imageSize = pipeline->getImageSize();
                 calibrationFlags = controller->getNewFlags();
 
-                //using namespace std::chrono;
-                //auto startPoint = high_resolution_clock::now();
+                using namespace std::chrono;
+                auto startPoint = high_resolution_clock::now();
                 if(capParams.board != TemplateType::chAruco) {
                     globalData->totalAvgErr =
                             cvfork::calibrateCamera(globalData->objectPoints, globalData->imagePoints,
@@ -161,8 +162,8 @@ int main(int argc, char** argv)
                                                            cv::noArray(), cv::noArray(), globalData->stdDeviations,
                                                            globalData->perViewErrors, calibrationFlags, solverTermCrit);
                 }
-                //auto endPoint = high_resolution_clock::now();
-                //std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
+                auto endPoint = high_resolution_clock::now();
+                std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
 
                 dataController->updateUndistortMap();
                 dataController->printParametersToConsole(std::cout);
