@@ -12,6 +12,15 @@ static bool readFromNode(cv::FileNode node, T& value)
         return false;
 }
 
+static bool checkAssertion(bool value, const std::string& msg)
+{
+    if(!value) {
+        std::cerr << "Error: " << msg << std::endl;
+        return false;
+    }
+    return true;
+}
+
 bool calib::parametersController::loadFromFile(const std::string &inputFileName)
 {
     cv::FileStorage reader;
@@ -32,8 +41,17 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     readFromNode(reader["solver_max_iters"], mInternalParameters.solverMaxIters);
     readFromNode(reader["fast_solver"], mInternalParameters.fastSolving);
 
+    bool retValue =
+            checkAssertion(mCapParams.charucoDictName > 0, "Dict name must be positive") &&
+            checkAssertion(mCapParams.charucoMarkerSize > 0, "Marker size must be positive") &&
+            checkAssertion(mCapParams.charucoSquareLenght > 0, "Square size must be positive") &&
+            checkAssertion(mCapParams.minFramesNum > 1, "Minimal number of frames for calibration < 1") &&
+            checkAssertion(mCapParams.maxFramesNum > mCapParams.minFramesNum, "maxFramesNum < minFramesNum") &&
+            checkAssertion(mInternalParameters.solverEps > 0, "Solver precision must be positive") &&
+            checkAssertion(mInternalParameters.solverMaxIters > 0, "Max solver iterations number must be positive");
+
     reader.release();
-    return true;
+    return retValue;
 }
 
 calib::parametersController::parametersController()
