@@ -219,6 +219,7 @@ bool CalibProcessor::checkLastFrame()
         RodriguesToEuler(r, angles, CALIB_DEGREES);
 
         if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1) > badAngleThresh)) {
+            printf("rejected: %f %f\n", angles.at<double>(0), angles.at<double>(0));
             mCalibData->objectPoints.pop_back();
             mCalibData->imagePoints.pop_back();
             isFrameBad = true;

@@ -26,7 +26,7 @@ const char* keys  =
         "{ci       | 0       | DefaultCameraID }"
         "{flip     | false   | Vertical flip of input frames }"
         "{t        | circles | Template for calibration (circles, chessboard, dualCircles, chAruco) }"
-        "{sz       | 163     | Distance between two nearest centers of circles or squares on calibration board}"
+        "{sz       | 16.3     | Distance between two nearest centers of circles or squares on calibration board}"
         "{dst      | 295     | Distance between white and black parts of daulCircles template}"
         "{w        |         | Width of template (in corners or circles)}"
         "{h        |         | Height of template (in corners or circles)}"
@@ -92,6 +92,7 @@ int main(int argc, char** argv)
     cv::TermCriteria solverTermCrit = cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS,
                                                        intParams.solverMaxIters, intParams.solverEps);
     Sptr<calibrationData> globalData(new calibrationData);
+    if(!parser.has("v")) globalData->imageSize = capParams.cameraResolution;
 
     int calibrationFlags = 0;
     if(intParams.fastSolving) calibrationFlags |= CALIB_USE_QR;

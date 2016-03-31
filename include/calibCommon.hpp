@@ -73,6 +73,7 @@ namespace calib
         std::string videoFileName;
         bool flipVertical;
         int camID;
+        cv::Size cameraResolution = cv::Size(IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT);
         int maxFramesNum = 30;
         int minFramesNum = 10;
     };

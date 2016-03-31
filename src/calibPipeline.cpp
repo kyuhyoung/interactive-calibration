@@ -27,20 +27,21 @@ PipelineExitStatus CalibPipeline::start(std::vector<Sptr<FrameProcessor>> proces
     {
         mCapture.open(mCaptureParams.camID);
         cv::Size maxRes = getCameraResolution();
+        cv::Size neededRes = mCaptureParams.cameraResolution;
 
-        if(maxRes.width > IMAGE_MAX_WIDTH) {
+        if(maxRes.width < neededRes.width) {
             double aR = (double)maxRes.width / maxRes.height;
-            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, IMAGE_MAX_WIDTH);
-            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, IMAGE_MAX_WIDTH/aR);
+            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, neededRes.width);
+            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, neededRes.width/aR);
         }
-        else if(maxRes.height > IMAGE_MAX_HEIGHT) {
+        else if(maxRes.height < neededRes.height) {
             double aR = (double)maxRes.width / maxRes.height;
-            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, IMAGE_MAX_HEIGHT);
-            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, IMAGE_MAX_HEIGHT*aR);
+            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, neededRes.height);
+            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, neededRes.height*aR);
         }
         else {
-            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, maxRes.height);
-            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, maxRes.width);
+            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, neededRes.height);
+            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, neededRes.width);
         }
         mCapture.set(CV_CAP_PROP_AUTOFOCUS, 0);
     }

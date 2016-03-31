@@ -34,6 +34,7 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     readFromNode(reader["charuco_dict"], mCapParams.charucoDictName);
     readFromNode(reader["charuco_square_lenght"], mCapParams.charucoSquareLenght);
     readFromNode(reader["charuco_marker_size"], mCapParams.charucoMarkerSize);
+    readFromNode(reader["camera_resolution"], mCapParams.cameraResolution);
     readFromNode(reader["max_frames_num"], mCapParams.maxFramesNum);
     readFromNode(reader["min_frames_num"], mCapParams.minFramesNum);
     readFromNode(reader["solver_eps"], mInternalParameters.solverEps);
@@ -50,7 +51,9 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
             checkAssertion(mInternalParameters.solverEps > 0, "Solver precision must be positive") &&
             checkAssertion(mInternalParameters.solverMaxIters > 0, "Max solver iterations number must be positive") &&
             checkAssertion(mInternalParameters.filterAlpha >=0 && mInternalParameters.filterAlpha <=1 ,
-                           "Frame filter convolution parameter must be in [0,1] interval");
+                           "Frame filter convolution parameter must be in [0,1] interval") &&
+            checkAssertion(mCapParams.cameraResolution.width > 0 && mCapParams.cameraResolution.height > 0,
+                           "Wrong camera resolution values");
 
     reader.release();
     return retValue;
