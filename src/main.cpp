@@ -24,7 +24,6 @@ const char* keys  =
         "{n        | 20      | Number of frames for calibration }"
         "{v        |         | Input from video file }"
         "{ci       | 0       | DefaultCameraID }"
-        "{si       | false   | Save captured frames }"
         "{flip     | false   | Vertical flip of input frames }"
         "{t        | circles | Template for calibration (circles, chessboard, dualCircles, chAruco) }"
         "{sz       | 163     | Distance between two nearest centers of circles or squares on calibration board}"
@@ -98,7 +97,8 @@ int main(int argc, char** argv)
     if(intParams.fastSolving) calibrationFlags |= CALIB_USE_QR;
     Sptr<calibController> controller(new calibController(globalData, calibrationFlags,
                                                          parser.get<bool>("ft"), capParams.minFramesNum));
-    Sptr<calibDataController> dataController(new calibDataController(globalData, capParams.maxFramesNum));
+    Sptr<calibDataController> dataController(new calibDataController(globalData, capParams.maxFramesNum,
+                                                                     intParams.filterAlpha));
     dataController->setParametersFileName(parser.get<std::string>("of"));
 
     Sptr<FrameProcessor> capProcessor, showProcessor;
@@ -163,10 +163,10 @@ int main(int argc, char** argv)
                                                            globalData->perViewErrors, calibrationFlags, solverTermCrit);
                 }
                 auto endPoint = high_resolution_clock::now();
-                std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
 
                 dataController->updateUndistortMap();
                 dataController->printParametersToConsole(std::cout);
+                std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
                 controller->updateState();
                 dataController->filterFrames();
                 static_cast<ShowProcessor*>(showProcessor.get())->updateBoardsView();

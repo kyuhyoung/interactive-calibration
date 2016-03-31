@@ -178,10 +178,11 @@ double calib::calibDataController::estimateGridSubsetQuality(size_t excludedInde
     }
 }
 
-calib::calibDataController::calibDataController(Sptr<calib::calibrationData> data, int maxFrames) :
+calib::calibDataController::calibDataController(Sptr<calib::calibrationData> data, int maxFrames, double convParameter) :
     mCalibData(data), mParamsFileName("CamParams.xml")
 {
     mMaxFramesNum = maxFrames;
+    mAlpha = convParameter;
 }
 
 calib::calibDataController::calibDataController()
@@ -195,19 +196,15 @@ void calib::calibDataController::filterFrames()
     CV_Assert(numberOfFrames == mCalibData->perViewErrors.total());
     if(numberOfFrames >= mMaxFramesNum) {
 
-        double worstValue = HUGE_VAL, alpha = 0.05, maxQuality = estimateGridSubsetQuality(-1);
+        double worstValue = -HUGE_VAL, maxQuality = estimateGridSubsetQuality(-1);
         size_t worstElemIndex = 0;
-        std::vector<double> criterionValues(numberOfFrames);
         for(size_t i = 0; i < numberOfFrames; i++) {
-
-            double gridQDelta = maxQuality - estimateGridSubsetQuality(i);
-            //printf("grid delta = %f  ", gridQDelta);
-            //criterionValues[i] = mCalibData->perViewErrors.at<double>(i)*alpha +
-                    //gridQDelta*(1 - alpha);
-            criterionValues[i] = fmin(mCalibData->perViewErrors.at<double>(i)*alpha,
-                                      gridQDelta*(1 - alpha));
-            if(criterionValues[i] < worstValue) {
-                worstValue = criterionValues[i];
+            //lower values of estimateGridSubsetQuality() is better
+            double gridQDelta = estimateGridSubsetQuality(i) - maxQuality;
+            double currentValue = mCalibData->perViewErrors.at<double>(i)*mAlpha +
+                    gridQDelta*(1. - mAlpha);
+            if(currentValue > worstValue) {
+                worstValue = currentValue;
                 worstElemIndex = i;
             }
         }
@@ -227,7 +224,6 @@ void calib::calibDataController::filterFrames()
         std::copy(mCalibData->perViewErrors.ptr<double>(worstElemIndex + 1), mCalibData->perViewErrors.ptr<double>(numberOfFrames),
                     newErrorsVec.ptr<double>(worstElemIndex));
         mCalibData->perViewErrors = newErrorsVec;
-        //printf("\n");
     }
 }
 

@@ -23,7 +23,7 @@ public:
 class CalibProcessor : public FrameProcessor
 {
 protected:
-    Sptr<calibrationData> mCalibdata;
+    Sptr<calibrationData> mCalibData;
     TemplateType mBoardType;
     cv::Size mBoardSize;
     std::vector<cv::Point2f> mTemplateLocations;
@@ -39,6 +39,8 @@ protected:
     int mDelayBetweenCaptures;
     int mCapuredFrames;
     float mMaxTemplateOffset;
+    float mSquareSize;
+    float mTemplDist;
 
     bool detectAndParseChessboard(const cv::Mat& frame);
     bool detectAndParseChAruco(const cv::Mat& frame);

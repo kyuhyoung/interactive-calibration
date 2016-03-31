@@ -68,6 +68,8 @@ namespace calib
         int charucoDictName;
         float charucoSquareLenght, charucoMarkerSize;
         float captureDelay = 500.f;
+        float squareSize;
+        float templDst;
         std::string videoFileName;
         bool flipVertical;
         int camID;
@@ -80,6 +82,7 @@ namespace calib
         double solverEps = 1e-7;
         int solverMaxIters = 30;
         bool fastSolving = false;
+        double filterAlpha = 0.1;
     };
 
 template <typename T>

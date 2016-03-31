@@ -42,10 +42,11 @@ namespace calib {
         std::stack<cameraParameters> mParamsStack;
         std::string mParamsFileName;
         int mMaxFramesNum;
+        double mAlpha;
 
         double estimateGridSubsetQuality(size_t excludedIndex);
     public:
-        calibDataController(Sptr<calibrationData> data, int maxFrames);
+        calibDataController(Sptr<calibrationData> data, int maxFrames, double convParameter);
         calibDataController();
 
         void filterFrames();

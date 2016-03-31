@@ -138,7 +138,6 @@ bool CalibProcessor::detectAndParseDualACircles(const cv::Mat &frame)
 void CalibProcessor::saveFrameData()
 {
     std::vector<cv::Point3f> objectPoints;
-    float squareSize = 16.3f, acircleGrid2Distance = 295.f;
 
     switch(mBoardType)
     {
@@ -146,41 +145,44 @@ void CalibProcessor::saveFrameData()
         objectPoints.reserve(mBoardSize.height*mBoardSize.width);
         for( int i = 0; i < mBoardSize.height; ++i )
             for( int j = 0; j < mBoardSize.width; ++j )
-                objectPoints.push_back(cv::Point3f(j*squareSize, i*squareSize, 0));
-        mCalibdata->imagePoints.push_back(mCurrentImagePoints);
-        mCalibdata->objectPoints.push_back(objectPoints);
+                objectPoints.push_back(cv::Point3f(j*mSquareSize, i*mSquareSize, 0));
+        mCalibData->imagePoints.push_back(mCurrentImagePoints);
+        mCalibData->objectPoints.push_back(objectPoints);
         break;
     case TemplateType::chAruco:
-        mCalibdata->allCharucoCorners.push_back(mCurrentCharucoCorners);
-        mCalibdata->allCharucoIds.push_back(mCurrentCharucoIds);
+        mCalibData->allCharucoCorners.push_back(mCurrentCharucoCorners);
+        mCalibData->allCharucoIds.push_back(mCurrentCharucoIds);
         break;
     case TemplateType::AcirclesGrid:
         objectPoints.reserve(mBoardSize.height*mBoardSize.width);
         for( int i = 0; i < mBoardSize.height; i++ )
             for( int j = 0; j < mBoardSize.width; j++ )
-                objectPoints.push_back(cv::Point3f((2*j + i % 2)*squareSize, i*squareSize, 0));
-        mCalibdata->imagePoints.push_back(mCurrentImagePoints);
-        mCalibdata->objectPoints.push_back(objectPoints);
+                objectPoints.push_back(cv::Point3f((2*j + i % 2)*mSquareSize, i*mSquareSize, 0));
+        mCalibData->imagePoints.push_back(mCurrentImagePoints);
+        mCalibData->objectPoints.push_back(objectPoints);
         break;
     case TemplateType::DoubleAcirclesGrid:
     {
-        float gridCenterX = (2*((float)mBoardSize.width - 1) + 1)*squareSize + acircleGrid2Distance/2;
-        float gridCenterY = (mBoardSize.height - 1)*squareSize/2;
+        float gridCenterX = (2*((float)mBoardSize.width - 1) + 1)*mSquareSize + mTemplDist / 2;
+        float gridCenterY = (mBoardSize.height - 1)*mSquareSize / 2;
         objectPoints.reserve(2*mBoardSize.height*mBoardSize.width);
 
         //white part
         for( int i = 0; i < mBoardSize.height; i++ )
             for( int j = 0; j < mBoardSize.width; j++ )
-                objectPoints.push_back(cv::Point3f(-float((2*j + i % 2)*squareSize + acircleGrid2Distance + (2*(mBoardSize.width - 1) + 1)*squareSize - gridCenterX),
-                                          -float(i*squareSize) - gridCenterY, 0));
+                objectPoints.push_back(
+                            cv::Point3f(-float((2*j + i % 2)*mSquareSize + mTemplDist +
+                                               (2*(mBoardSize.width - 1) + 1)*mSquareSize - gridCenterX),
+                                        -float(i*mSquareSize) - gridCenterY,
+                                        0));
         //black part
         for( int i = 0; i < mBoardSize.height; i++ )
             for( int j = 0; j < mBoardSize.width; j++ )
-                objectPoints.push_back(cv::Point3f(-float((2*j + i % 2)*squareSize - gridCenterX),
-                                          -float(i*squareSize) - gridCenterY, 0));
+                objectPoints.push_back(cv::Point3f(-float((2*j + i % 2)*mSquareSize - gridCenterX),
+                                          -float(i*mSquareSize) - gridCenterY, 0));
 
-        mCalibdata->imagePoints.push_back(mCurrentImagePoints);
-        mCalibdata->objectPoints.push_back(objectPoints);
+        mCalibData->imagePoints.push_back(mCurrentImagePoints);
+        mCalibData->objectPoints.push_back(objectPoints);
     }
         break;
     }
@@ -201,27 +203,26 @@ bool CalibProcessor::checkLastFrame()
     cv::Mat tmpCamMatrix;
     const double badAngleThresh = 40;
 
-    if(!mCalibdata->cameraMatrix.total()) {
+    if(!mCalibData->cameraMatrix.total()) {
         tmpCamMatrix = cv::Mat::eye(3, 3, CV_64F);
         tmpCamMatrix.at<double>(0,0) = 20000;
         tmpCamMatrix.at<double>(1,1) = 20000;
-        tmpCamMatrix.at<double>(0,2) = mCalibdata->imageSize.height/2;
-        tmpCamMatrix.at<double>(1,2) = mCalibdata->imageSize.width/2;
+        tmpCamMatrix.at<double>(0,2) = mCalibData->imageSize.height/2;
+        tmpCamMatrix.at<double>(1,2) = mCalibData->imageSize.width/2;
     }
     else
-        mCalibdata->cameraMatrix.copyTo(tmpCamMatrix);
+        mCalibData->cameraMatrix.copyTo(tmpCamMatrix);
 
     if(mBoardType != TemplateType::chAruco) {
         cv::Mat r, t, angles;
-        cv::solvePnP(mCalibdata->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibdata->distCoeffs, r, t);
+        cv::solvePnP(mCalibData->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibData->distCoeffs, r, t);
         RodriguesToEuler(r, angles, CALIB_DEGREES);
 
         if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1) > badAngleThresh)) {
-            mCalibdata->objectPoints.pop_back();
-            mCalibdata->imagePoints.pop_back();
+            mCalibData->objectPoints.pop_back();
+            mCalibData->imagePoints.pop_back();
             isFrameBad = true;
         }
-        //printf("angles: %f %f %f\n", angles.at<double>(0), angles.at<double>(1), angles.at<double>(2));
     }
     else {
         cv::Mat r, t, angles;
@@ -233,27 +234,28 @@ bool CalibProcessor::checkLastFrame()
             allObjPoints.push_back(mCharucoBoard->chessboardCorners[pointID]);
         }
 
-        cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibdata->distCoeffs, r, t);
+        cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibData->distCoeffs, r, t);
         RodriguesToEuler(r, angles, CALIB_DEGREES);
 
         if(180.0 - fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1) > badAngleThresh)) {
             isFrameBad = true;
-            mCalibdata->allCharucoCorners.pop_back();
-            mCalibdata->allCharucoIds.pop_back();
+            mCalibData->allCharucoCorners.pop_back();
+            mCalibData->allCharucoIds.pop_back();
         }
-        //printf("angles: %f %f %f\n", angles.at<double>(0), angles.at<double>(1), angles.at<double>(2));
     }
     return isFrameBad;
 }
 
 CalibProcessor::CalibProcessor(Sptr<calibrationData> data, captureParameters &capParams) :
-    mCalibdata(data), mBoardType(capParams.board), mBoardSize(capParams.boardSize)
+    mCalibData(data), mBoardType(capParams.board), mBoardSize(capParams.boardSize)
 {
     mCapuredFrames = 0;
     mNeededFramesNum = 1;
     mDelayBetweenCaptures = static_cast<int>(capParams.captureDelay / 30);
-    mMaxTemplateOffset = std::sqrt(std::pow(mCalibdata->imageSize.height, 2) +
-                                   std::pow(mCalibdata->imageSize.width, 2)) / 20.0;
+    mMaxTemplateOffset = std::sqrt(std::pow(mCalibData->imageSize.height, 2) +
+                                   std::pow(mCalibData->imageSize.width, 2)) / 20.0;
+    mSquareSize = capParams.squareSize;
+    mTemplDist = capParams.templDst;
 
     switch(mBoardType)
     {
@@ -302,8 +304,8 @@ cv::Mat CalibProcessor::processFrame(const cv::Mat &frame)
             saveFrameData();
             bool isFrameBad = checkLastFrame();
             if (!isFrameBad) {
-                std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibdata->imagePoints.size(),
-                                                                                        mCalibdata->allCharucoCorners.size()));
+                std::string displayMessage = cv::format("Frame # %d captured", std::max(mCalibData->imagePoints.size(),
+                                                                                        mCalibData->allCharucoCorners.size()));
                 if(!showOverlayMessage(displayMessage))
                     showCaptureMessage(frame, displayMessage);
                 mCapuredFrames++;

@@ -14,11 +14,10 @@ static bool readFromNode(cv::FileNode node, T& value)
 
 static bool checkAssertion(bool value, const std::string& msg)
 {
-    if(!value) {
+    if(!value)
         std::cerr << "Error: " << msg << std::endl;
-        return false;
-    }
-    return true;
+
+    return value;
 }
 
 bool calib::parametersController::loadFromFile(const std::string &inputFileName)
@@ -40,15 +39,18 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     readFromNode(reader["solver_eps"], mInternalParameters.solverEps);
     readFromNode(reader["solver_max_iters"], mInternalParameters.solverMaxIters);
     readFromNode(reader["fast_solver"], mInternalParameters.fastSolving);
+    readFromNode(reader["frame_filter_conv_param"], mInternalParameters.filterAlpha);
 
     bool retValue =
-            checkAssertion(mCapParams.charucoDictName > 0, "Dict name must be positive") &&
+            checkAssertion(mCapParams.charucoDictName >= 0, "Dict name must be >= 0") &&
             checkAssertion(mCapParams.charucoMarkerSize > 0, "Marker size must be positive") &&
             checkAssertion(mCapParams.charucoSquareLenght > 0, "Square size must be positive") &&
             checkAssertion(mCapParams.minFramesNum > 1, "Minimal number of frames for calibration < 1") &&
             checkAssertion(mCapParams.maxFramesNum > mCapParams.minFramesNum, "maxFramesNum < minFramesNum") &&
             checkAssertion(mInternalParameters.solverEps > 0, "Solver precision must be positive") &&
-            checkAssertion(mInternalParameters.solverMaxIters > 0, "Max solver iterations number must be positive");
+            checkAssertion(mInternalParameters.solverMaxIters > 0, "Max solver iterations number must be positive") &&
+            checkAssertion(mInternalParameters.filterAlpha >=0 && mInternalParameters.filterAlpha <=1 ,
+                           "Frame filter convolution parameter must be in [0,1] interval");
 
     reader.release();
     return retValue;
@@ -72,6 +74,13 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
 {
     mCapParams.flipVertical = parser.get<bool>("flip");
     mCapParams.captureDelay = parser.get<float>("d");
+    mCapParams.squareSize = parser.get<float>("sz");
+    mCapParams.templDst = parser.get<float>("dst");
+
+    if(!checkAssertion(mCapParams.squareSize > 0, "Distance between corners or circles must be positive"))
+        return false;
+    if(!checkAssertion(mCapParams.templDst > 0, "Distance betwen parts of dual template must be positive"))
+        return false;
 
     if (parser.has("v")) {
         mCapParams.source = InputVideoSource::File;
@@ -106,15 +115,14 @@ bool calib::parametersController::loadFromParser(cv::CommandLineParser &parser)
 
     if(parser.has("w") && parser.has("h")) {
         mCapParams.boardSize = cv::Size(parser.get<int>("w"), parser.get<int>("h"));
-        if (mCapParams.boardSize.width <= 0 || mCapParams.boardSize.height <= 0) {
-            std::cerr << "Board size must be positive\n";
+        if(!checkAssertion(mCapParams.boardSize.width > 0 || mCapParams.boardSize.height > 0,
+                           "Board size must be positive"))
             return false;
-        }
     }
-    if(parser.get<std::string>("of").find(".xml") <= 0) {
-        std::cerr << "Wrong output file name: correct format is [name].xml\n";
+
+    if(!checkAssertion(parser.get<std::string>("of").find(".xml") > 0,
+                       "Wrong output file name: correct format is [name].xml"))
         return false;
-    }
 
     loadFromFile(parser.get<std::string>("pf"));
     return true;
