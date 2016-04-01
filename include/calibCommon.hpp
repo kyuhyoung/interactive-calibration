@@ -66,6 +66,7 @@ namespace calib
         TemplateType board;
         cv::Size boardSize;
         int charucoDictName;
+        int calibrationStep = 1;
         float charucoSquareLenght, charucoMarkerSize;
         float captureDelay = 500.f;
         float squareSize;

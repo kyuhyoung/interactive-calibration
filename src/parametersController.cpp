@@ -35,6 +35,7 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
     readFromNode(reader["charuco_square_lenght"], mCapParams.charucoSquareLenght);
     readFromNode(reader["charuco_marker_size"], mCapParams.charucoMarkerSize);
     readFromNode(reader["camera_resolution"], mCapParams.cameraResolution);
+    readFromNode(reader["calibration_step"], mCapParams.calibrationStep);
     readFromNode(reader["max_frames_num"], mCapParams.maxFramesNum);
     readFromNode(reader["min_frames_num"], mCapParams.minFramesNum);
     readFromNode(reader["solver_eps"], mInternalParameters.solverEps);
@@ -47,6 +48,7 @@ bool calib::parametersController::loadFromFile(const std::string &inputFileName)
             checkAssertion(mCapParams.charucoMarkerSize > 0, "Marker size must be positive") &&
             checkAssertion(mCapParams.charucoSquareLenght > 0, "Square size must be positive") &&
             checkAssertion(mCapParams.minFramesNum > 1, "Minimal number of frames for calibration < 1") &&
+            checkAssertion(mCapParams.calibrationStep > 0, "Calibration step must be positive") &&
             checkAssertion(mCapParams.maxFramesNum > mCapParams.minFramesNum, "maxFramesNum < minFramesNum") &&
             checkAssertion(mInternalParameters.solverEps > 0, "Solver precision must be positive") &&
             checkAssertion(mInternalParameters.solverMaxIters > 0, "Max solver iterations number must be positive") &&

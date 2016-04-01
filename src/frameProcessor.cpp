@@ -251,7 +251,7 @@ CalibProcessor::CalibProcessor(Sptr<calibrationData> data, captureParameters &ca
     mCalibData(data), mBoardType(capParams.board), mBoardSize(capParams.boardSize)
 {
     mCapuredFrames = 0;
-    mNeededFramesNum = 1;
+    mNeededFramesNum = capParams.calibrationStep;
     mDelayBetweenCaptures = static_cast<int>(capParams.captureDelay / 30);
     mMaxTemplateOffset = std::sqrt(std::pow(mCalibData->imageSize.height, 2) +
                                    std::pow(mCalibData->imageSize.width, 2)) / 20.0;
@@ -342,6 +342,8 @@ CalibProcessor::~CalibProcessor()
 {
 
 }
+
+////////////////////////////////////////////
 
 void ShowProcessor::drawBoard(cv::Mat &img, cv::InputArray &points)
 {

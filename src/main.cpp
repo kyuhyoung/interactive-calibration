@@ -30,11 +30,11 @@ const char* keys  =
         "{dst      | 295     | Distance between white and black parts of daulCircles template}"
         "{w        |         | Width of template (in corners or circles)}"
         "{h        |         | Height of template (in corners or circles)}"
-        "{of       | CamParams.xml | Output file name}"
+        "{of       | cameraParameters.xml | Output file name}"
         "{ft       | true    | Auto tuning of calibration flags}"
         "{vis      | grid    | Captured boards visualisation (grid, window)}"
         "{d        | 900     | Min delay between captures}"
-        "{pf       | params.xml| Advanced application parameters}"
+        "{pf       | defaultConfig.xml| Advanced application parameters}"
         "{help     |         | Print help}";
 
 bool calib::showOverlayMessage(const std::string& message)
