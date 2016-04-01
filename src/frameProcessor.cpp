@@ -190,9 +190,10 @@ void CalibProcessor::saveFrameData()
 
 void CalibProcessor::showCaptureMessage(const cv::Mat& frame, const std::string &message)
 {
-    int baseLine = 400;
-    cv::Point textOrigin(frame.cols / 10, frame.rows - 2*baseLine - 10);
-    cv::putText(frame, message, textOrigin, 1, VIDEO_TEXT_SIZE, cv::Scalar(0,0,255), 2, CV_AA);
+    cv::Point textOrigin(100, 100);
+    double textSize = VIDEO_TEXT_SIZE * frame.cols / (double) IMAGE_MAX_WIDTH;
+    cv::bitwise_not(frame, frame);
+    cv::putText(frame, message, textOrigin, 1, textSize, cv::Scalar(0,0,255), 2, CV_AA);
     cv::imshow(mainWindowName, frame);
     cv::waitKey(300);
 }
@@ -377,11 +378,13 @@ ShowProcessor::ShowProcessor(Sptr<calibrationData> data, Sptr<calibController> c
     mNeedUndistort = true;
     mVisMode = visualisationMode::Grid;
     mGridViewScale = 0.5;
+    mTextSize = VIDEO_TEXT_SIZE;
 }
 
 cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
 {
     if(mCalibdata->cameraMatrix.size[0] && mCalibdata->distCoeffs.size[0]) {
+        mTextSize = VIDEO_TEXT_SIZE * (double) frame.cols / IMAGE_MAX_WIDTH;
         cv::Scalar textColor = cv::Scalar(0,0,255);
         cv::Mat frameCopy;
 
@@ -389,10 +392,10 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
             if(mVisMode == visualisationMode::Grid)
                 drawGridPoints(frame);
             cv::remap(frame, frameCopy, mCalibdata->undistMap1, mCalibdata->undistMap2, cv::INTER_LINEAR);
-            int baseLine = 400;
-            cv::Size textSize = cv::getTextSize("Undistorted view", 1, VIDEO_TEXT_SIZE, 2, &baseLine);
-            cv::Point textOrigin(20, frame.rows - (int)(2.5*textSize.height));
-            cv::putText(frameCopy, "Undistorted view", textOrigin, 1, VIDEO_TEXT_SIZE, textColor, 2, CV_AA);
+            int baseLine = 100;
+            cv::Size textSize = cv::getTextSize("Undistorted view", 1, mTextSize, 2, &baseLine);
+            cv::Point textOrigin(baseLine, frame.rows - (int)(2.5*textSize.height));
+            cv::putText(frameCopy, "Undistorted view", textOrigin, 1, mTextSize, textColor, 2, CV_AA);
         }
         else {
             frame.copyTo(frameCopy);
@@ -409,9 +412,9 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
             displayMessage.append(" OK");
 
         int baseLine = 100;
-        cv::Size textSize = cv::getTextSize(displayMessage, 1, VIDEO_TEXT_SIZE - 1, 2, &baseLine);
-        cv::Point textOrigin = cv::Point(20, 2*textSize.height);
-        cv::putText(frameCopy, displayMessage, textOrigin, 1, VIDEO_TEXT_SIZE - 1, textColor, 2, CV_AA);
+        cv::Size textSize = cv::getTextSize(displayMessage, 1, mTextSize - 1, 2, &baseLine);
+        cv::Point textOrigin = cv::Point(baseLine, 2*textSize.height);
+        cv::putText(frameCopy, displayMessage, textOrigin, 1, mTextSize - 1, textColor, 2, CV_AA);
 
         if(mCalibdata->stdDeviations.at<double>(0) == 0)
             displayMessage = cv::format("DF = %.2f", mCalibdata->stdDeviations.at<double>(1)*sigmaMult);
@@ -420,11 +423,11 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
                                                     mCalibdata->stdDeviations.at<double>(1)*sigmaMult);
         if(mController->getConfidenceIntrervalsState() && mController->getFramesNumberState())
             displayMessage.append(" OK");
-        cv::putText(frameCopy, displayMessage, cv::Point(20, 4*textSize.height), 1, VIDEO_TEXT_SIZE - 1, textColor, 2, CV_AA);
+        cv::putText(frameCopy, displayMessage, cv::Point(baseLine, 4*textSize.height), 1, mTextSize - 1, textColor, 2, CV_AA);
 
         if(mController->getCommonCalibrationState()) {
             displayMessage = cv::format("Calibration is done");
-            cv::putText(frameCopy, displayMessage, cv::Point(20, 6*textSize.height), 1, VIDEO_TEXT_SIZE - 1, textColor, 2, CV_AA);
+            cv::putText(frameCopy, displayMessage, cv::Point(baseLine, 6*textSize.height), 1, mTextSize - 1, textColor, 2, CV_AA);
         }
         int calibFlags = mController->getNewFlags();
         displayMessage = "";
@@ -434,8 +437,8 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
             displayMessage.append("TD=0 ");
         displayMessage.append(cv::format("K1=%.2f K2=%.2f K3=%.2f", mCalibdata->distCoeffs.at<double>(0), mCalibdata->distCoeffs.at<double>(1),
                                          mCalibdata->distCoeffs.at<double>(4)));
-        cv::putText(frameCopy, displayMessage, cv::Point(20, frameCopy.rows - (int)(1.5*textSize.height)),
-                    1, VIDEO_TEXT_SIZE - 1, textColor, 2, CV_AA);
+        cv::putText(frameCopy, displayMessage, cv::Point(baseLine, frameCopy.rows - (int)(1.5*textSize.height)),
+                    1, mTextSize - 1, textColor, 2, CV_AA);
         return frameCopy;
     }
 
@@ -455,6 +458,18 @@ void ShowProcessor::resetState()
 void ShowProcessor::setVisualisationMode(visualisationMode mode)
 {
     mVisMode = mode;
+}
+
+void ShowProcessor::switchVisualisationMode()
+{
+    if(mVisMode == visualisationMode::Grid) {
+        mVisMode = visualisationMode::Window;
+        updateBoardsView();
+    }
+    else {
+        mVisMode = visualisationMode::Grid;
+        cv::destroyWindow(gridWindowName);
+    }
 }
 
 void ShowProcessor::clearBoardsView()

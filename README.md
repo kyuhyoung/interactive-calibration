@@ -10,7 +10,7 @@ Main features:
 - Auto capturing of static boards
 - Multicriterial evaluation of calibration quality 
 
-Build dependences: OpenCV 3.1+OpenCV_Contrib(for charuco template support)+Lapack(optionally for fast processing)+QT(optionally for advanced gui).
+Build dependencies: OpenCV 3.1+OpenCV_Contrib(for charuco template support)+Lapack(optionally for fast processing)+QT(optionally for advanced gui).
 
 CMake build options:
 - USE_LAPACK enables or disables Lapck

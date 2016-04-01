@@ -74,6 +74,8 @@ PipelineExitStatus CalibPipeline::start(std::vector<Sptr<FrameProcessor>> proces
             return PipelineExitStatus::SaveCurrentData;
         else if (key == 117) // u
             return PipelineExitStatus::SwitchUndistort;
+        else if (key == 118) // v
+            return PipelineExitStatus::SwitchVisualisation;
 
         for (auto it = processors.begin(); it != processors.end(); ++it)
             if((*it)->isProcessed())

@@ -26,7 +26,7 @@ const char* keys  =
         "{ci       | 0       | DefaultCameraID }"
         "{flip     | false   | Vertical flip of input frames }"
         "{t        | circles | Template for calibration (circles, chessboard, dualCircles, chAruco) }"
-        "{sz       | 16.3     | Distance between two nearest centers of circles or squares on calibration board}"
+        "{sz       | 16.3    | Distance between two nearest centers of circles or squares on calibration board}"
         "{dst      | 295     | Distance between white and black parts of daulCircles template}"
         "{w        |         | Width of template (in corners or circles)}"
         "{h        |         | Height of template (in corners or circles)}"
@@ -71,6 +71,12 @@ void saveCurrentParamsButton(int state, void* data)
 {
     if((static_cast<Sptr<calibDataController>*>(data))->get()->saveCurrentCameraParameters())
         calib::showOverlayMessage("Calibration parameters saved");
+}
+
+void switchVisualisationModeButton(int state, void* data)
+{
+    ShowProcessor* processor = static_cast<ShowProcessor*>(((Sptr<FrameProcessor>*)data)->get());
+    processor->switchVisualisationMode();
 }
 
 int main(int argc, char** argv)
@@ -124,6 +130,7 @@ int main(int argc, char** argv)
     cv::createButton("Delete all frames", deleteAllButton, &dataController, CV_PUSH_BUTTON);
     cv::createButton("Undistort", undistortButton, &showProcessor, CV_CHECKBOX, false);
     cv::createButton("Save current parameters", saveCurrentParamsButton, &dataController, CV_PUSH_BUTTON);
+    cv::createButton("Switch visualisation mode", switchVisualisationModeButton, &showProcessor, CV_PUSH_BUTTON);
 #endif
     try {
         while(true)
@@ -185,6 +192,8 @@ int main(int argc, char** argv)
             }
             else if (exitStatus == PipelineExitStatus::SwitchUndistort)
                 static_cast<ShowProcessor*>(showProcessor.get())->switchUndistort();
+            else if (exitStatus == PipelineExitStatus::SwitchVisualisation)
+                static_cast<ShowProcessor*>(showProcessor.get())->switchVisualisationMode();
 
             for (auto it = processors.begin(); it != processors.end(); ++it)
                 (*it)->resetState();

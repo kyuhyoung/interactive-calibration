@@ -22,7 +22,8 @@ namespace calib
     static const char* consoleHelp = "Hot keys:\nesc - exit application\n"
                               "s - save current data to .xml file\n"
                               "r - delete last frame\n"
-                              "d - delete all frames";
+                              "d - delete all frames\n"
+                              "v - switch visualisation";
 
     static const double sigmaMult = 1.96;
 

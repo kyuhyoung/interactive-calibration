@@ -69,6 +69,7 @@ protected:
     visualisationMode mVisMode;
     bool mNeedUndistort;
     double mGridViewScale;
+    double mTextSize;
 
     void drawBoard(cv::Mat& img, cv::InputArray& points);
     void drawGridPoints(const cv::Mat& frame);
@@ -79,6 +80,7 @@ public:
     virtual void resetState() override;
 
     void setVisualisationMode(visualisationMode mode);
+    void switchVisualisationMode();
     void clearBoardsView();
     void updateBoardsView();
 

@@ -71,7 +71,7 @@ void calib::calibController::updateState()
     }
 
     if(getFramesNumberState())
-        mCoverageQualityState = estimateCoverageQuality() > 1.9 ? true : false;
+        mCoverageQualityState = estimateCoverageQuality() > 1.8 ? true : false;
 
     if (getFramesNumberState() && mNeedTuning) {
         if( !(mCalibFlags & cv::CALIB_FIX_ASPECT_RATIO) &&
@@ -199,10 +199,8 @@ void calib::calibDataController::filterFrames()
         double worstValue = -HUGE_VAL, maxQuality = estimateGridSubsetQuality(-1);
         size_t worstElemIndex = 0;
         for(size_t i = 0; i < numberOfFrames; i++) {
-            //lower values of estimateGridSubsetQuality() is better
-            double gridQDelta = estimateGridSubsetQuality(i) - maxQuality;
-            double currentValue = mCalibData->perViewErrors.at<double>(i)*mAlpha +
-                    gridQDelta*(1. - mAlpha);
+            double gridQDelta = -(estimateGridSubsetQuality(i) - maxQuality);
+            double currentValue = mCalibData->perViewErrors.at<double>(i)*mAlpha + gridQDelta*(1. - mAlpha);
             if(currentValue > worstValue) {
                 worstValue = currentValue;
                 worstElemIndex = i;
