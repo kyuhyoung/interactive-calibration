@@ -241,7 +241,7 @@ static void _SVDcompute( const InputArray& _aarr, OutputArray _w,
 
     Mat _a = a, w = _w.getMat();
     CV_Assert( w.isContinuous() );
-    int a_ofs = 0, work_ofs=0, iwork_ofs=0, buf_size = 0;
+    int work_ofs=0, iwork_ofs=0, buf_size = 0;
     bool temp_a = false;
     double u1=0, v1=0, work1=0;
     float uf1=0, vf1=0, workf1=0;
@@ -278,7 +278,6 @@ static void _SVDcompute( const InputArray& _aarr, OutputArray _w,
     assert(info == 0);
     if( temp_a )
     {
-        a_ofs = buf_size;
         buf_size += n*m*elem_size;
     }
     work_ofs = buf_size;
@@ -492,6 +491,7 @@ double cvfork::invert( InputArray _src, OutputArray _dst, int method )
             (w.ptr<double>()[0] >= DBL_EPSILON ?
              w.ptr<double>()[n-1]/w.ptr<double>()[0] : 0);
     }
+    return 0;
 }
 
 #endif //USE_LAPACK

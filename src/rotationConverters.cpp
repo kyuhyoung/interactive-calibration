@@ -39,14 +39,14 @@ void calib::Euler(const cv::Mat& src, cv::Mat& dst, int argType)
             roll *= 180./M_PI;
         }
         else if(argType != CALIB_RADIANS)
-            CV_Error(CV_StsBadArg, "Invalid argument type");
+            CV_Error(cv::Error::Code::StsBadFlag, "Invalid argument type");
 
         dst.at<double>(0,0) = pitch;
         dst.at<double>(1,0) = yaw;
         dst.at<double>(2,0) = roll;
     }
-    else if( src.cols == 1 && src.rows == 3 ||
-             src.cols == 3 && src.rows == 1 )
+    else if( (src.cols == 1 && src.rows == 3) ||
+             (src.cols == 3 && src.rows == 1) )
     {
         //convert vector which contains 3 angles (pitch, yaw, roll) to rotaion matrix
         double pitch, yaw, roll;
@@ -69,7 +69,7 @@ void calib::Euler(const cv::Mat& src, cv::Mat& dst, int argType)
             roll *= M_PI / 180.;
         }
         else if(argType != CALIB_RADIANS)
-            CV_Error(CV_StsBadArg, "Invalid argument type");
+            CV_Error(cv::Error::Code::StsBadFlag, "Invalid argument type");
 
         dst = cv::Mat(3, 3, CV_64F);
         cv::Mat M(3, 3, CV_64F);
@@ -104,7 +104,7 @@ void calib::Euler(const cv::Mat& src, cv::Mat& dst, int argType)
 
 void calib::RodriguesToEuler(const cv::Mat& src, cv::Mat& dst, int argType)
 {
-    CV_Assert(src.cols == 1 && src.rows == 3 || src.cols == 3 && src.rows == 1);
+    CV_Assert((src.cols == 1 && src.rows == 3) || (src.cols == 3 && src.rows == 1));
     cv::Mat R;
     cv::Rodrigues(src, R);
     Euler(R, dst, argType);
@@ -112,7 +112,7 @@ void calib::RodriguesToEuler(const cv::Mat& src, cv::Mat& dst, int argType)
 
 void calib::EulerToRodrigues(const cv::Mat& src, cv::Mat& dst, int argType)
 {
-    CV_Assert(src.cols == 1 && src.rows == 3 || src.cols == 3 && src.rows == 1);
+    CV_Assert((src.cols == 1 && src.rows == 3) || (src.cols == 3 && src.rows == 1));
     cv::Mat R;
     Euler(src, R, argType);
     cv::Rodrigues(R, dst);

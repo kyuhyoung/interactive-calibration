@@ -20,7 +20,7 @@
 
 using namespace calib;
 
-const char* keys  =
+const std::string keys  =
         "{n        | 20      | Number of frames for calibration }"
         "{v        |         | Input from video file }"
         "{ci       | 0       | DefaultCameraID }"
@@ -33,7 +33,7 @@ const char* keys  =
         "{of       | cameraParameters.xml | Output file name}"
         "{ft       | true    | Auto tuning of calibration flags}"
         "{vis      | grid    | Captured boards visualisation (grid, window)}"
-        "{d        | 900     | Min delay between captures}"
+        "{d        | 1     | Min delay between captures}"
         "{pf       | defaultConfig.xml| Advanced application parameters}"
         "{help     |         | Print help}";
 
@@ -49,12 +49,14 @@ bool calib::showOverlayMessage(const std::string& message)
 
 void deleteButton(int state, void* data)
 {
+    state++;
     (static_cast<Sptr<calibDataController>*>(data))->get()->deleteLastFrame();
     calib::showOverlayMessage("Last frame deleted");
 }
 
 void deleteAllButton(int state, void* data)
 {
+    state++;
     (static_cast<Sptr<calibDataController>*>(data))->get()->deleteAllData();
     calib::showOverlayMessage("All frames deleted");
 }
@@ -69,12 +71,14 @@ void undistortButton(int state, void* data)
 
 void saveCurrentParamsButton(int state, void* data)
 {
+    state++;
     if((static_cast<Sptr<calibDataController>*>(data))->get()->saveCurrentCameraParameters())
         calib::showOverlayMessage("Calibration parameters saved");
 }
 
 void switchVisualisationModeButton(int state, void* data)
 {
+    state++;
     ShowProcessor* processor = static_cast<ShowProcessor*>(((Sptr<FrameProcessor>*)data)->get());
     processor->switchVisualisationMode();
 }
@@ -126,8 +130,8 @@ int main(int argc, char** argv)
     cv::namedWindow(mainWindowName);
     cv::moveWindow(mainWindowName, 10, 10);
 #ifdef HAVE_QT
-    cv::createButton("Delete last frame", deleteButton, &dataController, CV_PUSH_BUTTON);
-    cv::createButton("Delete all frames", deleteAllButton, &dataController, CV_PUSH_BUTTON);
+    cv::createButton("Delete last frame", deleteButton, &dataController, cv::QT_PUSH_BUTTON);
+    cv::createButton("Delete all frames", deleteAllButton, &dataController, cv::QT_PUSH_BUTTON);
     cv::createButton("Undistort", undistortButton, &showProcessor, CV_CHECKBOX, false);
     cv::createButton("Save current parameters", saveCurrentParamsButton, &dataController, CV_PUSH_BUTTON);
     cv::createButton("Switch visualisation mode", switchVisualisationModeButton, &showProcessor, CV_PUSH_BUTTON);

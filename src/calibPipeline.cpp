@@ -8,10 +8,10 @@ using namespace calib;
 
 cv::Size CalibPipeline::getCameraResolution()
 {
-    mCapture.set(CV_CAP_PROP_FRAME_WIDTH, 10000);
-    mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, 10000);
-    int w = (int)mCapture.get(CV_CAP_PROP_FRAME_WIDTH);
-    int h = (int)mCapture.get(CV_CAP_PROP_FRAME_HEIGHT);
+    mCapture.set(cv::CAP_PROP_FRAME_WIDTH, 10000);
+    mCapture.set(cv::CAP_PROP_FRAME_HEIGHT, 10000);
+    int w = (int)mCapture.get(cv::CAP_PROP_FRAME_WIDTH);
+    int h = (int)mCapture.get(cv::CAP_PROP_FRAME_HEIGHT);
     return cv::Size(w,h);
 }
 
@@ -31,23 +31,24 @@ PipelineExitStatus CalibPipeline::start(std::vector<Sptr<FrameProcessor>> proces
 
         if(maxRes.width < neededRes.width) {
             double aR = (double)maxRes.width / maxRes.height;
-            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, neededRes.width);
-            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, neededRes.width/aR);
+            mCapture.set(cv::CAP_PROP_FRAME_WIDTH, neededRes.width);
+            mCapture.set(cv::CAP_PROP_FRAME_HEIGHT, neededRes.width/aR);
         }
         else if(maxRes.height < neededRes.height) {
             double aR = (double)maxRes.width / maxRes.height;
-            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, neededRes.height);
-            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, neededRes.height*aR);
+            mCapture.set(cv::CAP_PROP_FRAME_HEIGHT, neededRes.height);
+            mCapture.set(cv::CAP_PROP_FRAME_WIDTH, neededRes.height*aR);
         }
         else {
-            mCapture.set(CV_CAP_PROP_FRAME_HEIGHT, neededRes.height);
-            mCapture.set(CV_CAP_PROP_FRAME_WIDTH, neededRes.width);
+            mCapture.set(cv::CAP_PROP_FRAME_HEIGHT, neededRes.height);
+            mCapture.set(cv::CAP_PROP_FRAME_WIDTH, neededRes.width);
         }
-        mCapture.set(CV_CAP_PROP_AUTOFOCUS, 0);
+        mCapture.set(cv::CAP_PROP_AUTOFOCUS, 0);
+        mCaptureParams.fps = (int)mCapture.get(cv::CAP_PROP_FPS);
     }
     else if (mCaptureParams.source == InputVideoSource::File && !mCapture.isOpened())
         mCapture.open(mCaptureParams.videoFileName);
-    mImageSize = cv::Size((int)mCapture.get(CV_CAP_PROP_FRAME_WIDTH), (int)mCapture.get(CV_CAP_PROP_FRAME_HEIGHT));
+    mImageSize = cv::Size((int)mCapture.get(cv::CAP_PROP_FRAME_WIDTH), (int)mCapture.get(cv::CAP_PROP_FRAME_HEIGHT));
 
     if(!mCapture.isOpened())
         throw std::runtime_error("Unable to open video source");

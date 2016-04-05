@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <limits>
 
 using namespace calib;
 
@@ -193,7 +194,7 @@ void CalibProcessor::showCaptureMessage(const cv::Mat& frame, const std::string 
     cv::Point textOrigin(100, 100);
     double textSize = VIDEO_TEXT_SIZE * frame.cols / (double) IMAGE_MAX_WIDTH;
     cv::bitwise_not(frame, frame);
-    cv::putText(frame, message, textOrigin, 1, textSize, cv::Scalar(0,0,255), 2, CV_AA);
+    cv::putText(frame, message, textOrigin, 1, textSize, cv::Scalar(0,0,255), 2, cv::LINE_AA);
     cv::imshow(mainWindowName, frame);
     cv::waitKey(300);
 }
@@ -219,8 +220,7 @@ bool CalibProcessor::checkLastFrame()
         cv::solvePnP(mCalibData->objectPoints.back(), mCurrentImagePoints, tmpCamMatrix, mCalibData->distCoeffs, r, t);
         RodriguesToEuler(r, angles, CALIB_DEGREES);
 
-        if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1) > badAngleThresh)) {
-            printf("rejected: %f %f\n", angles.at<double>(0), angles.at<double>(0));
+        if(fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
             mCalibData->objectPoints.pop_back();
             mCalibData->imagePoints.pop_back();
             isFrameBad = true;
@@ -239,7 +239,7 @@ bool CalibProcessor::checkLastFrame()
         cv::solvePnP(allObjPoints, mCurrentCharucoCorners, tmpCamMatrix, mCalibData->distCoeffs, r, t);
         RodriguesToEuler(r, angles, CALIB_DEGREES);
 
-        if(180.0 - fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1) > badAngleThresh)) {
+        if(180.0 - fabs(angles.at<double>(0)) > badAngleThresh || fabs(angles.at<double>(1)) > badAngleThresh) {
             isFrameBad = true;
             mCalibData->allCharucoCorners.pop_back();
             mCalibData->allCharucoIds.pop_back();
@@ -253,7 +253,7 @@ CalibProcessor::CalibProcessor(Sptr<calibrationData> data, captureParameters &ca
 {
     mCapuredFrames = 0;
     mNeededFramesNum = capParams.calibrationStep;
-    mDelayBetweenCaptures = static_cast<int>(capParams.captureDelay / 30);
+    mDelayBetweenCaptures = static_cast<int>(capParams.captureDelay * capParams.fps);
     mMaxTemplateOffset = std::sqrt(std::pow(mCalibData->imageSize.height, 2) +
                                    std::pow(mCalibData->imageSize.width, 2)) / 20.0;
     mSquareSize = capParams.squareSize;
@@ -272,6 +272,8 @@ CalibProcessor::CalibProcessor(Sptr<calibrationData> data, captureParameters &ca
         break;
     case TemplateType::DoubleAcirclesGrid:
         mBlobDetectorPtr = cv::SimpleBlobDetector::create(getDetectorParams());
+        break;
+    case TemplateType::Chessboard:
         break;
     }
 }
@@ -355,25 +357,25 @@ void ShowProcessor::drawBoard(cv::Mat &img, cv::InputArray &points)
     poly.resize(templateHull.size());
     for(size_t i=0; i<templateHull.size();i++)
         poly[i] = cv::Point((int)(templateHull[i].x*mGridViewScale), (int)(templateHull[i].y*mGridViewScale));
-    cv::fillConvexPoly(tmpView, poly, cv::Scalar(0, 255, 0), CV_AA);
+    cv::fillConvexPoly(tmpView, poly, cv::Scalar(0, 255, 0), cv::LINE_AA);
     cv::addWeighted(tmpView, .2, img, 1, 0, img);
 }
 
 void ShowProcessor::drawGridPoints(const cv::Mat &frame)
 {
     if(mBoardType != TemplateType::chAruco)
-        for(auto it = mCalibdata->imagePoints.begin(); it != mCalibdata->imagePoints.end(); ++it)
+        for(auto it = mCalibData->imagePoints.begin(); it != mCalibData->imagePoints.end(); ++it)
             for(auto pointIt = (*it).begin(); pointIt != (*it).end(); ++pointIt)
-                cv::circle(frame, *pointIt, POINT_SIZE, cv::Scalar(0, 255, 0), 1, CV_AA);
+                cv::circle(frame, *pointIt, POINT_SIZE, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
     else
-        for(auto it = mCalibdata->allCharucoCorners.begin(); it != mCalibdata->allCharucoCorners.end(); ++it)
+        for(auto it = mCalibData->allCharucoCorners.begin(); it != mCalibData->allCharucoCorners.end(); ++it)
             for(int i = 0; i < (*it).size[0]; i++)
                 cv::circle(frame, cv::Point((int)(*it).at<float>(i, 0), (int)(*it).at<float>(i, 1)),
-                           POINT_SIZE, cv::Scalar(0, 255, 0), 1, CV_AA);
+                           POINT_SIZE, cv::Scalar(0, 255, 0), 1, cv::LINE_AA);
 }
 
 ShowProcessor::ShowProcessor(Sptr<calibrationData> data, Sptr<calibController> controller, TemplateType board) :
-    mCalibdata(data), mController(controller), mBoardType(board)
+    mCalibData(data), mController(controller), mBoardType(board)
 {
     mNeedUndistort = true;
     mVisMode = visualisationMode::Grid;
@@ -383,7 +385,7 @@ ShowProcessor::ShowProcessor(Sptr<calibrationData> data, Sptr<calibController> c
 
 cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
 {
-    if(mCalibdata->cameraMatrix.size[0] && mCalibdata->distCoeffs.size[0]) {
+    if(mCalibData->cameraMatrix.size[0] && mCalibData->distCoeffs.size[0]) {
         mTextSize = VIDEO_TEXT_SIZE * (double) frame.cols / IMAGE_MAX_WIDTH;
         cv::Scalar textColor = cv::Scalar(0,0,255);
         cv::Mat frameCopy;
@@ -391,11 +393,11 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
         if (mNeedUndistort && mController->getFramesNumberState()) {
             if(mVisMode == visualisationMode::Grid)
                 drawGridPoints(frame);
-            cv::remap(frame, frameCopy, mCalibdata->undistMap1, mCalibdata->undistMap2, cv::INTER_LINEAR);
+            cv::remap(frame, frameCopy, mCalibData->undistMap1, mCalibData->undistMap2, cv::INTER_LINEAR);
             int baseLine = 100;
             cv::Size textSize = cv::getTextSize("Undistorted view", 1, mTextSize, 2, &baseLine);
             cv::Point textOrigin(baseLine, frame.rows - (int)(2.5*textSize.height));
-            cv::putText(frameCopy, "Undistorted view", textOrigin, 1, mTextSize, textColor, 2, CV_AA);
+            cv::putText(frameCopy, "Undistorted view", textOrigin, 1, mTextSize, textColor, 2, cv::LINE_AA);
         }
         else {
             frame.copyTo(frameCopy);
@@ -403,42 +405,42 @@ cv::Mat ShowProcessor::processFrame(const cv::Mat &frame)
                 drawGridPoints(frameCopy);
         }
         std::string displayMessage;
-        if(mCalibdata->stdDeviations.at<double>(0) == 0)
-            displayMessage = cv::format("F = %d RMS = %.3f", (int)mCalibdata->cameraMatrix.at<double>(0,0), mCalibdata->totalAvgErr);
+        if(mCalibData->stdDeviations.at<double>(0) == 0)
+            displayMessage = cv::format("F = %d RMS = %.3f", (int)mCalibData->cameraMatrix.at<double>(0,0), mCalibData->totalAvgErr);
         else
-            displayMessage = cv::format("Fx = %d Fy = %d RMS = %.3f", (int)mCalibdata->cameraMatrix.at<double>(0,0),
-                                            (int)mCalibdata->cameraMatrix.at<double>(1,1), mCalibdata->totalAvgErr);
+            displayMessage = cv::format("Fx = %d Fy = %d RMS = %.3f", (int)mCalibData->cameraMatrix.at<double>(0,0),
+                                            (int)mCalibData->cameraMatrix.at<double>(1,1), mCalibData->totalAvgErr);
         if(mController->getRMSState() && mController->getFramesNumberState())
             displayMessage.append(" OK");
 
         int baseLine = 100;
         cv::Size textSize = cv::getTextSize(displayMessage, 1, mTextSize - 1, 2, &baseLine);
         cv::Point textOrigin = cv::Point(baseLine, 2*textSize.height);
-        cv::putText(frameCopy, displayMessage, textOrigin, 1, mTextSize - 1, textColor, 2, CV_AA);
+        cv::putText(frameCopy, displayMessage, textOrigin, 1, mTextSize - 1, textColor, 2, cv::LINE_AA);
 
-        if(mCalibdata->stdDeviations.at<double>(0) == 0)
-            displayMessage = cv::format("DF = %.2f", mCalibdata->stdDeviations.at<double>(1)*sigmaMult);
+        if(mCalibData->stdDeviations.at<double>(0) == 0)
+            displayMessage = cv::format("DF = %.2f", mCalibData->stdDeviations.at<double>(1)*sigmaMult);
         else
-            displayMessage = cv::format("DFx = %.2f DFy = %.2f", mCalibdata->stdDeviations.at<double>(0)*sigmaMult,
-                                                    mCalibdata->stdDeviations.at<double>(1)*sigmaMult);
+            displayMessage = cv::format("DFx = %.2f DFy = %.2f", mCalibData->stdDeviations.at<double>(0)*sigmaMult,
+                                                    mCalibData->stdDeviations.at<double>(1)*sigmaMult);
         if(mController->getConfidenceIntrervalsState() && mController->getFramesNumberState())
             displayMessage.append(" OK");
-        cv::putText(frameCopy, displayMessage, cv::Point(baseLine, 4*textSize.height), 1, mTextSize - 1, textColor, 2, CV_AA);
+        cv::putText(frameCopy, displayMessage, cv::Point(baseLine, 4*textSize.height), 1, mTextSize - 1, textColor, 2, cv::LINE_AA);
 
         if(mController->getCommonCalibrationState()) {
             displayMessage = cv::format("Calibration is done");
-            cv::putText(frameCopy, displayMessage, cv::Point(baseLine, 6*textSize.height), 1, mTextSize - 1, textColor, 2, CV_AA);
+            cv::putText(frameCopy, displayMessage, cv::Point(baseLine, 6*textSize.height), 1, mTextSize - 1, textColor, 2, cv::LINE_AA);
         }
         int calibFlags = mController->getNewFlags();
         displayMessage = "";
         if(!(calibFlags & cv::CALIB_FIX_ASPECT_RATIO))
-            displayMessage.append(cv::format("AR=%.3f ", mCalibdata->cameraMatrix.at<double>(0,0)/mCalibdata->cameraMatrix.at<double>(1,1)));
+            displayMessage.append(cv::format("AR=%.3f ", mCalibData->cameraMatrix.at<double>(0,0)/mCalibData->cameraMatrix.at<double>(1,1)));
         if(calibFlags & cv::CALIB_ZERO_TANGENT_DIST)
             displayMessage.append("TD=0 ");
-        displayMessage.append(cv::format("K1=%.2f K2=%.2f K3=%.2f", mCalibdata->distCoeffs.at<double>(0), mCalibdata->distCoeffs.at<double>(1),
-                                         mCalibdata->distCoeffs.at<double>(4)));
+        displayMessage.append(cv::format("K1=%.2f K2=%.2f K3=%.2f", mCalibData->distCoeffs.at<double>(0), mCalibData->distCoeffs.at<double>(1),
+                                         mCalibData->distCoeffs.at<double>(4)));
         cv::putText(frameCopy, displayMessage, cv::Point(baseLine, frameCopy.rows - (int)(1.5*textSize.height)),
-                    1, mTextSize - 1, textColor, 2, CV_AA);
+                    1, mTextSize - 1, textColor, 2, cv::LINE_AA);
         return frameCopy;
     }
 
@@ -480,10 +482,10 @@ void ShowProcessor::clearBoardsView()
 void ShowProcessor::updateBoardsView()
 {
     if(mVisMode == visualisationMode::Window) {
-        cv::Size originSize = mCalibdata->imageSize;
+        cv::Size originSize = mCalibData->imageSize;
         cv::Mat altGridView = cv::Mat::zeros((int)(originSize.height*mGridViewScale), (int)(originSize.width*mGridViewScale), CV_8UC3);
         if(mBoardType != TemplateType::chAruco)
-            for(auto it = mCalibdata->imagePoints.begin(); it != mCalibdata->imagePoints.end(); ++it)
+            for(auto it = mCalibData->imagePoints.begin(); it != mCalibData->imagePoints.end(); ++it)
                 if(mBoardType != TemplateType::DoubleAcirclesGrid)
                     drawBoard(altGridView, *it);
                 else {
@@ -495,7 +497,7 @@ void ShowProcessor::updateBoardsView()
                     drawBoard(altGridView, points);
                 }
         else
-            for(auto it = mCalibdata->allCharucoCorners.begin(); it != mCalibdata->allCharucoCorners.end(); ++it)
+            for(auto it = mCalibData->allCharucoCorners.begin(); it != mCalibData->allCharucoCorners.end(); ++it)
                 drawBoard(altGridView, *it);
         cv::imshow(gridWindowName, altGridView);
     }

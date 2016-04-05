@@ -13,7 +13,7 @@ namespace calib {
     protected:
         Sptr<calibrationData> mCalibData;
         int mCalibFlags;
-        int mMinFramesNum;
+        unsigned mMinFramesNum;
         bool mNeedTuning;
         bool mConfIntervalsState;
         bool mCoverageQualityState;
@@ -41,7 +41,7 @@ namespace calib {
         Sptr<calibrationData> mCalibData;
         std::stack<cameraParameters> mParamsStack;
         std::string mParamsFileName;
-        int mMaxFramesNum;
+        unsigned mMaxFramesNum;
         double mAlpha;
 
         double estimateGridSubsetQuality(size_t excludedIndex);

@@ -196,10 +196,10 @@ void calib::calibDataController::filterFrames()
     CV_Assert(numberOfFrames == mCalibData->perViewErrors.total());
     if(numberOfFrames >= mMaxFramesNum) {
 
-        double worstValue = -HUGE_VAL, maxQuality = estimateGridSubsetQuality(-1);
+        double worstValue = -HUGE_VAL, maxQuality = estimateGridSubsetQuality(numberOfFrames);
         size_t worstElemIndex = 0;
         for(size_t i = 0; i < numberOfFrames; i++) {
-            double gridQDelta = -(estimateGridSubsetQuality(i) - maxQuality);
+            double gridQDelta = estimateGridSubsetQuality(i) - maxQuality;
             double currentValue = mCalibData->perViewErrors.at<double>(i)*mAlpha + gridQDelta*(1. - mAlpha);
             if(currentValue > worstValue) {
                 worstValue = currentValue;
@@ -218,7 +218,10 @@ void calib::calibDataController::filterFrames()
         }
 
         cv::Mat newErrorsVec = cv::Mat(numberOfFrames - 1, 1, CV_64F);
-        std::copy_n(mCalibData->perViewErrors.ptr<double>(0), worstElemIndex, newErrorsVec.ptr<double>(0));
+        //std::copy_n(mCalibData->perViewErrors.ptr<double>(0), worstElemIndex, newErrorsVec.ptr<double>(0));
+        std::copy(mCalibData->perViewErrors.ptr<double>(0),
+                  mCalibData->perViewErrors.ptr<double>(worstElemIndex), newErrorsVec.ptr<double>(0));
+
         std::copy(mCalibData->perViewErrors.ptr<double>(worstElemIndex + 1), mCalibData->perViewErrors.ptr<double>(numberOfFrames),
                     newErrorsVec.ptr<double>(worstElemIndex));
         mCalibData->perViewErrors = newErrorsVec;

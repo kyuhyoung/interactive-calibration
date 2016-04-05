@@ -17,9 +17,9 @@ namespace calib
     enum class InputVideoSource { Camera, File };
     enum class TemplateType { AcirclesGrid, Chessboard, chAruco, DoubleAcirclesGrid };
 
-    static const char* mainWindowName = "Calibration";
-    static const char* gridWindowName = "Board locations";
-    static const char* consoleHelp = "Hot keys:\nesc - exit application\n"
+    static const std::string mainWindowName = "Calibration";
+    static const std::string gridWindowName = "Board locations";
+    static const std::string consoleHelp = "Hot keys:\nesc - exit application\n"
                               "s - save current data to .xml file\n"
                               "r - delete last frame\n"
                               "d - delete all frames\n"
@@ -69,12 +69,13 @@ namespace calib
         int charucoDictName;
         int calibrationStep = 1;
         float charucoSquareLenght, charucoMarkerSize;
-        float captureDelay = 500.f;
+        float captureDelay;
         float squareSize;
         float templDst;
         std::string videoFileName;
         bool flipVertical;
         int camID;
+        int fps = 30;
         cv::Size cameraResolution = cv::Size(IMAGE_MAX_WIDTH, IMAGE_MAX_HEIGHT);
         int maxFramesNum = 30;
         int minFramesNum = 10;

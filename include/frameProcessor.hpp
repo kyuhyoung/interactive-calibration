@@ -36,7 +36,7 @@ protected:
     cv::Ptr<cv::aruco::CharucoBoard> mCharucoBoard;
 
     int mNeededFramesNum;
-    int mDelayBetweenCaptures;
+    unsigned mDelayBetweenCaptures;
     int mCapuredFrames;
     float mMaxTemplateOffset;
     float mSquareSize;
@@ -63,7 +63,7 @@ enum class visualisationMode {Grid, Window};
 class ShowProcessor : public FrameProcessor
 {
 protected:
-    Sptr<calibrationData> mCalibdata;
+    Sptr<calibrationData> mCalibData;
     Sptr<calibController> mController;
     TemplateType mBoardType;
     visualisationMode mVisMode;
