@@ -79,8 +79,8 @@ public:
     virtual bool isProcessed() const override;
     virtual void resetState() override;
 
-    void setVisualisationMode(visualisationMode mode);
-    void switchVisualisationMode();
+    void setVisualizationMode(visualisationMode mode);
+    void switchVisualizationMode();
     void clearBoardsView();
     void updateBoardsView();
 

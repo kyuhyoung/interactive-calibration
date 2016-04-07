@@ -9,7 +9,48 @@
   typedef __CLPK_real       real;
 #else
   typedef int    integer;
+  typedef int lapack_int;
   #include <lapacke.h>
+
+extern void sgelsd_( lapack_int* m, lapack_int* n, lapack_int* nrhs, float* a,
+                          lapack_int* lda, float* b, lapack_int* ldb, float* s,
+                          float* rcond, lapack_int* rank, float* work,
+                          lapack_int* lwork, lapack_int* iwork, lapack_int *info );
+extern void dgelsd_( lapack_int* m, lapack_int* n, lapack_int* nrhs, double* a,
+                    lapack_int* lda, double* b, lapack_int* ldb, double* s,
+                    double* rcond, lapack_int* rank, double* work,
+                    lapack_int* lwork, lapack_int* iwork, lapack_int *info );
+
+extern void sgels_( char* trans, lapack_int* m, lapack_int* n, lapack_int* nrhs,
+                   float* a, lapack_int* lda, float* b, lapack_int* ldb,
+                   float* work, lapack_int* lwork, lapack_int *info );
+extern void dgels_( char* trans, lapack_int* m, lapack_int* n, lapack_int* nrhs,
+                          double* a, lapack_int* lda, double* b, lapack_int* ldb,
+                          double* work, lapack_int* lwork, lapack_int *info );
+extern void spotrf_( char* uplo, lapack_int* n, float* a, lapack_int* lda,
+                    lapack_int *info );
+extern void spotrs_( char* uplo, lapack_int* n, lapack_int* nrhs, const float* a,
+                                lapack_int* lda, float* b, lapack_int* ldb,
+                                lapack_int *info );
+extern void dpotrf_( char* uplo, lapack_int* n, double* a, lapack_int* lda,
+                           lapack_int *info );
+extern void dpotrs_( char* uplo, lapack_int* n, lapack_int* nrhs,
+                    const double* a, lapack_int* lda, double* b,
+                    lapack_int* ldb, lapack_int *info );
+extern void sgesv_( lapack_int* n, lapack_int* nrhs, float* a, lapack_int* lda,
+                   lapack_int* ipiv, float* b, lapack_int* ldb,
+                   lapack_int *info );
+extern void dgesv_( lapack_int* n, lapack_int* nrhs, double* a, lapack_int* lda,
+                          lapack_int* ipiv, double* b, lapack_int* ldb,
+                          lapack_int *info );
+extern void sgesdd_( char* jobz, lapack_int* m, lapack_int* n, float* a,
+                           lapack_int* lda, float* s, float* u, lapack_int* ldu,
+                           float* vt, lapack_int* ldvt, float* work, lapack_int* lwork,
+                           lapack_int* iwork, lapack_int *info );
+extern void dgesdd_( char* jobz, lapack_int* m, lapack_int* n, double* a,
+                           lapack_int* lda, double* s, double* u, lapack_int* ldu,
+                           double* vt, lapack_int* ldvt, double* work,
+                           lapack_int* lwork, lapack_int* iwork, lapack_int *info );
 #endif
 
 using namespace cv;

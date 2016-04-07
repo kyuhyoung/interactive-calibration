@@ -43,6 +43,7 @@ bool calib::showOverlayMessage(const std::string& message)
     cv::displayOverlay(mainWindowName, message, OVERLAY_DELAY);
     return true;
 #else
+    std::count << message << std::endl;
     return false;
 #endif
 }
@@ -80,7 +81,7 @@ void switchVisualisationModeButton(int state, void* data)
 {
     state++;
     ShowProcessor* processor = static_cast<ShowProcessor*>(((Sptr<FrameProcessor>*)data)->get());
-    processor->switchVisualisationMode();
+    processor->switchVisualizationMode();
 }
 
 int main(int argc, char** argv)
@@ -117,7 +118,7 @@ int main(int argc, char** argv)
     showProcessor = Sptr<FrameProcessor>(new ShowProcessor(globalData, controller, capParams.board));
 
     if(parser.get<std::string>("vis").find("window") == 0) {
-        static_cast<ShowProcessor*>(showProcessor.get())->setVisualisationMode(visualisationMode::Window);
+        static_cast<ShowProcessor*>(showProcessor.get())->setVisualizationMode(visualisationMode::Window);
         cv::namedWindow(gridWindowName);
         cv::moveWindow(gridWindowName, 1280, 500);
     }
@@ -180,7 +181,8 @@ int main(int argc, char** argv)
                 dataController->printParametersToConsole(std::cout);
                 std::cout << "Calibration time: " << (duration_cast<duration<double>>(endPoint - startPoint)).count() << "\n";
                 controller->updateState();
-                dataController->filterFrames();
+                for(int j = 0; j < capParams.calibrationStep; j++)
+                    dataController->filterFrames();
                 static_cast<ShowProcessor*>(showProcessor.get())->updateBoardsView();
             }
             else if (exitStatus == PipelineExitStatus::DeleteLastFrame) {
@@ -197,7 +199,7 @@ int main(int argc, char** argv)
             else if (exitStatus == PipelineExitStatus::SwitchUndistort)
                 static_cast<ShowProcessor*>(showProcessor.get())->switchUndistort();
             else if (exitStatus == PipelineExitStatus::SwitchVisualisation)
-                static_cast<ShowProcessor*>(showProcessor.get())->switchVisualisationMode();
+                static_cast<ShowProcessor*>(showProcessor.get())->switchVisualizationMode();
 
             for (auto it = processors.begin(); it != processors.end(); ++it)
                 (*it)->resetState();

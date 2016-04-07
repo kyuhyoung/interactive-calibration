@@ -13,4 +13,4 @@ Main features:
 Build dependencies: OpenCV 3.1+OpenCV_Contrib(for charuco template support)+Lapack(optionally for fast processing)+QT(optionally for advanced gui).
 
 CMake build options:
-- USE_LAPACK enables or disables Lapck
+- USE_LAPACK enables or disables Lapack

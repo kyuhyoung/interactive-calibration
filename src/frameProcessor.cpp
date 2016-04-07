@@ -457,12 +457,12 @@ void ShowProcessor::resetState()
 
 }
 
-void ShowProcessor::setVisualisationMode(visualisationMode mode)
+void ShowProcessor::setVisualizationMode(visualisationMode mode)
 {
     mVisMode = mode;
 }
 
-void ShowProcessor::switchVisualisationMode()
+void ShowProcessor::switchVisualizationMode()
 {
     if(mVisMode == visualisationMode::Grid) {
         mVisMode = visualisationMode::Window;
